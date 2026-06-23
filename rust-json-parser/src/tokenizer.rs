@@ -1,3 +1,5 @@
+use core::f64;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     LeftBrace,
@@ -7,7 +9,7 @@ pub enum Token {
     Comma,
     Colon,
     String(String),
-    Number,
+    Number(f64),
     Boolean,
     Null,
 }
@@ -36,6 +38,20 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     }
                 }
 
+            }
+            '0'..='9' | '-' => {
+                let mut number_as_string = String::new();
+                while let Some(number_char) = chars.next() {
+                    match number_char {
+                        '0'..='9' | '-' | '.' => number_as_string.push(number_char),
+                        _ => break
+                    }
+                }
+                let number_value = number_as_string.parse::<f64>();
+                match number_value {
+                    Ok(value) => tokens.push(Token::Number(value)),
+                    Err(err) => println!("Found an error while parsing {number_as_string} as a number: {err:?}"),
+                }
             }
             _ => {},
         }
@@ -99,5 +115,32 @@ mod tests {
         let tokens = tokenize(r#""phone: 555-1234""#);
         assert_eq!(tokens.len(), 1);
         assert_eq!(tokens[0], Token::String("phone: 555-1234".to_string()));
+    }
+
+    #[test]
+    fn test_number() {
+        let tokens = tokenize("42");
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0], Token::Number(42.0));
+    }
+
+    #[test]
+    fn test_negative_number() {
+        let tokens = tokenize("-42");
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0], Token::Number(-42.0));
+    }
+
+    #[test]
+    fn test_decimal_number() {
+        let tokens = tokenize("0.5");
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0], Token::Number(0.5));
+    }
+
+    #[test]
+    fn test_leading_decimal_not_a_number() {
+        let tokens = tokenize(".5");
+        assert!(!tokens.contains(&Token::Number(0.5)));
     }
 }
