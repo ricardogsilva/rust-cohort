@@ -1,5 +1,3 @@
-use core::{f64, num};
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Boolean(bool),
@@ -29,19 +27,19 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             ':' => tokens.push(Token::Colon),
             '"' => {
                 let mut string_value = String::new();
-                chars.next();  // consume opening quote - throw it away
+                chars.next(); // consume opening quote - throw it away
 
                 while let Some(next_char) = chars.peek() {
                     match next_char {
-                        '"' => break,  // end of string - don't consume closing quote
+                        '"' => break, // end of string - don't consume closing quote
                         _ => {
                             string_value.push(*next_char);
                             chars.next();
-                        },
+                        }
                     }
                 }
                 tokens.push(Token::String(string_value));
-            },
+            }
             '0'..='9' | '-' => {
                 let mut number_as_string = String::new();
 
@@ -55,18 +53,19 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                         '0'..='9' | '-' | '.' => {
                             number_as_string.push(*next_char);
                             chars.next();
-                        },
-                        _ => break,  // next_char is no longer part of a number
-
+                        }
+                        _ => break, // next_char is no longer part of a number
                     }
                 }
                 let number_value = number_as_string.parse::<f64>();
                 match number_value {
                     Ok(value) => tokens.push(Token::Number(value)),
-                    Err(err) => println!("Found an error while parsing {number_as_string} as a number: {err:?}"),
+                    Err(err) => println!(
+                        "Found an error while parsing {number_as_string} as a number: {err:?}"
+                    ),
                 }
-                continue;  // already consumed the current char
-            },
+                continue; // already consumed the current char
+            }
             't' | 'f' | 'n' => {
                 let mut keyword_as_string = String::new();
                 keyword_as_string.push(ch);
@@ -77,8 +76,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                         _ if next_char.is_alphabetic() => {
                             keyword_as_string.push(*next_char);
                             chars.next();
-                        },
-                        _ => break,  // next_char is not longer part of the keyword
+                        }
+                        _ => break, // next_char is not longer part of the keyword
                     }
                 }
                 match keyword_as_string.as_str() {
@@ -87,14 +86,13 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     "null" => tokens.push(Token::Null),
                     _ => println!("Found an unexpected keyword {keyword_as_string}"),
                 }
-                continue;  // already consumed the current char
-            },
-            _ => {},
+                continue; // already consumed the current char
+            }
+            _ => {}
         }
 
         // after having looped through all the next chars, consume the current char
         chars.next();
-
     }
 
     tokens
@@ -206,7 +204,7 @@ mod tests {
         let tokens = tokenize(r#"{"age": 30, "active": true}"#);
         println!("{tokens:?}");
         assert_eq!(tokens.len(), 9);
-        // note: Instead of testing containment, since we have a small input, 
+        // note: Instead of testing containment, since we have a small input,
         // this verifies all tokens positionally
         assert_eq!(tokens[0], Token::LeftBrace);
         assert_eq!(tokens[1], Token::String("age".to_string()));
