@@ -18,11 +18,24 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     // create an iterator that will provide each char in the input
     let mut chars = input.chars().peekable();
 
+    // this `while let Some(&ch) = chars.peek() {}` form means 'keep looping as long as peek() returns Some()'.
+    // It is actually is syntatic sugar for this:
+    // loop {
+    //     match chars.peek() {
+    //         Some(&ch) => {},
+    //         _ => break,
+    //     }
+    // }
+    // 
+    // the Some wraps a reference to ch, and accessing it via Some(&ch) performs the destructuring, 
+    // which means we get back a ch
     while let Some(&ch) = chars.peek() {
         // look at the next char in the iterator, without actually consuming it
         match ch {
             '{' => tokens.push(Token::LeftBrace),
             '}' => tokens.push(Token::RightBrace),
+            '[' => tokens.push(Token::LeftBracket),
+            ']' => tokens.push(Token::RightBracket),
             ',' => tokens.push(Token::Comma),
             ':' => tokens.push(Token::Colon),
             '"' => {
@@ -216,4 +229,85 @@ mod tests {
         assert_eq!(tokens[7], Token::Boolean(true));
         assert_eq!(tokens[8], Token::RightBrace);
     }
+
+    #[test]
+    fn test_array() {
+        let tokens = tokenize("[1, 2, 3]");
+        assert_eq!(tokens.len(), 7);
+        assert_eq!(tokens[0], Token::LeftBracket);
+        assert_eq!(tokens[1], Token::Number(1.0));
+        assert_eq!(tokens[2], Token::Comma);
+        assert_eq!(tokens[3], Token::Number(2.0));
+        assert_eq!(tokens[4], Token::Comma);
+        assert_eq!(tokens[5], Token::Number(3.0));
+        assert_eq!(tokens[6], Token::RightBracket);
+    }
+
+    #[test]
+    fn test_nested_object() {
+        let tokens = tokenize(r#"{"nested": {"name": "Alice"}, "age": 30}"#);
+        assert_eq!(tokens.len(), 13);
+        assert_eq!(tokens[0], Token::LeftBrace);
+        assert_eq!(tokens[1], Token::String("nested".to_string()));
+        assert_eq!(tokens[2], Token::Colon);
+        assert_eq!(tokens[3], Token::LeftBrace);
+        assert_eq!(tokens[4], Token::String("name".to_string()));
+        assert_eq!(tokens[5], Token::Colon);
+        assert_eq!(tokens[6], Token::String("Alice".to_string()));
+        assert_eq!(tokens[7], Token::RightBrace);
+        assert_eq!(tokens[8], Token::Comma);
+        assert_eq!(tokens[9], Token::String("age".to_string()));
+        assert_eq!(tokens[10], Token::Colon);
+        assert_eq!(tokens[11], Token::Number(30.0));
+        assert_eq!(tokens[12], Token::RightBrace);
+    }
+
+    #[test]
+    fn test_number_zero() {
+        let tokens = tokenize("0");
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0], Token::Number(0.0));
+    }
+
+    #[test]
+    fn test_complex_input() {
+        let input = r#"
+        {
+          "name": "Alice Johnson",
+          "age": 28,
+          "email": "alice@example.com",
+          "active": true,
+          "preferences": {
+            "theme": "dark",
+            "notifications": true,
+            "language": "en"
+          },
+          "tags": [
+            "developer", 
+            "rust", 
+            "python"
+          ],
+          "metadata": {
+            "created": "2023-01-15T10:30:00Z",
+            "updated": "2023-12-01T15:45:30Z"
+          }
+        }
+        "#;
+        let tokens = tokenize(input);
+        println!("{tokens:?}");
+        assert_eq!(tokens.len(), 55);
+        assert_eq!(tokens[1], Token::String("name".to_string()));
+        assert_eq!(tokens[5], Token::String("age".to_string()));
+        assert_eq!(tokens[10], Token::Colon);
+        assert_eq!(tokens[15], Token::Boolean(true));
+        assert_eq!(tokens[21], Token::Colon);
+        assert_eq!(tokens[26], Token::Boolean(true));
+        assert_eq!(tokens[30], Token::String("en".to_string()));
+        assert_eq!(tokens[36], Token::String("developer".to_string()));
+        assert_eq!(tokens[42], Token::Comma);
+        assert_eq!(tokens[46], Token::String("created".to_string()));
+        assert_eq!(tokens[50], Token::String("updated".to_string()));
+        assert_eq!(tokens[54], Token::RightBrace);
+    }
+
 }
