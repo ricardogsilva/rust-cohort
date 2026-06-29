@@ -32,24 +32,48 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     while let Some(&ch) = chars.peek() {
         // look at the next char in the iterator, without actually consuming it
         match ch {
-            '{' => tokens.push(Token::LeftBrace),
-            '}' => tokens.push(Token::RightBrace),
-            '[' => tokens.push(Token::LeftBracket),
-            ']' => tokens.push(Token::RightBracket),
-            ',' => tokens.push(Token::Comma),
-            ':' => tokens.push(Token::Colon),
+            '{' => {
+                tokens.push(Token::LeftBrace);
+                chars.next();
+            },
+            '}' => {
+                tokens.push(Token::RightBrace);
+                chars.next();
+            },
+            '[' => {
+                tokens.push(Token::LeftBracket);
+                chars.next();
+            },
+            ']' => {
+                tokens.push(Token::RightBracket);
+                chars.next();
+            },
+            ',' => {
+                tokens.push(Token::Comma); 
+                chars.next();
+            },
+            ':' => {
+                tokens.push(Token::Colon);
+                chars.next();
+            },
             '"' => {
+                chars.next();  // consume opening quote - throw it away
                 let mut string_value = String::new();
-                chars.next(); // consume opening quote - throw it away
+                let mut string_terminated = false;
 
-                while let Some(next_char) = chars.peek() {
-                    match next_char {
-                        '"' => break, // end of string - don't consume closing quote
-                        _ => {
-                            string_value.push(*next_char);
-                            chars.next();
-                        }
+                while let Some(&next_ch) = chars.peek() {
+                    if next_ch == '"' {
+                        chars.next();
+                        string_terminated = true;
+                        break;
                     }
+                    string_value.push(next_ch);
+                    chars.next();
+
+                }
+                if !string_terminated {
+                    eprintln!("There is an unterminated string literal");
+                    break;
                 }
                 tokens.push(Token::String(string_value));
             }
@@ -73,11 +97,10 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 let number_value = number_as_string.parse::<f64>();
                 match number_value {
                     Ok(value) => tokens.push(Token::Number(value)),
-                    Err(err) => println!(
+                    Err(err) => eprintln!(
                         "Found an error while parsing {number_as_string} as a number: {err:?}"
                     ),
                 }
-                continue; // already consumed the current char
             }
             't' | 'f' | 'n' => {
                 let mut keyword_as_string = String::new();
@@ -97,15 +120,17 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     "true" => tokens.push(Token::Boolean(true)),
                     "false" => tokens.push(Token::Boolean(false)),
                     "null" => tokens.push(Token::Null),
-                    _ => println!("Found an unexpected keyword {keyword_as_string}"),
+                    _ => eprintln!("Found an unexpected keyword {keyword_as_string}"),
                 }
-                continue; // already consumed the current char
             }
-            _ => {}
+            ' ' | '\n' | '\r' | '\t' => {
+                chars.next();  // whitespace does not need to be captured
+            }
+            _ => {
+                eprintln!("Found an unexpected character: {ch}");
+                chars.next();
+            }
         }
-
-        // after having looped through all the next chars, consume the current char
-        chars.next();
     }
 
     tokens
