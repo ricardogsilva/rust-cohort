@@ -26,8 +26,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     //         _ => break,
     //     }
     // }
-    // 
-    // the Some wraps a reference to ch, and accessing it via Some(&ch) performs the destructuring, 
+    //
+    // the Some wraps a reference to ch, and accessing it via Some(&ch) performs the destructuring,
     // which means we get back a ch
     while let Some(&ch) = chars.peek() {
         // look at the next char in the iterator, without actually consuming it
@@ -35,29 +35,29 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             '{' => {
                 tokens.push(Token::LeftBrace);
                 chars.next();
-            },
+            }
             '}' => {
                 tokens.push(Token::RightBrace);
                 chars.next();
-            },
+            }
             '[' => {
                 tokens.push(Token::LeftBracket);
                 chars.next();
-            },
+            }
             ']' => {
                 tokens.push(Token::RightBracket);
                 chars.next();
-            },
+            }
             ',' => {
-                tokens.push(Token::Comma); 
+                tokens.push(Token::Comma);
                 chars.next();
-            },
+            }
             ':' => {
                 tokens.push(Token::Colon);
                 chars.next();
-            },
+            }
             '"' => {
-                chars.next();  // consume opening quote - throw it away
+                chars.next(); // consume opening quote - throw it away
                 let mut string_value = String::new();
                 let mut string_terminated = false;
 
@@ -69,7 +69,6 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     }
                     string_value.push(next_ch);
                     chars.next();
-
                 }
                 if !string_terminated {
                     eprintln!("There is an unterminated string literal");
@@ -124,7 +123,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 }
             }
             ' ' | '\n' | '\r' | '\t' => {
-                chars.next();  // whitespace does not need to be captured
+                chars.next(); // whitespace does not need to be captured
             }
             _ => {
                 eprintln!("Found an unexpected character: {ch}");
@@ -334,5 +333,4 @@ mod tests {
         assert_eq!(tokens[50], Token::String("updated".to_string()));
         assert_eq!(tokens[54], Token::RightBrace);
     }
-
 }
