@@ -20,13 +20,21 @@ mod tests {
     #[test]
     fn test_integration() -> Result<()> {
         // test whole parsing pipeline
-        assert_eq!(parse_json("42")?, JsonValue::Number(42.0));
-        assert_eq!(parse_json("true")?, JsonValue::Boolean(true));
-        assert_eq!(parse_json("null")?, JsonValue::Null);
-        assert_eq!(
-            parse_json(r#""hello""#)?,
-            JsonValue::String("hello".to_string())
-        );
+
+        let test_cases = vec![
+            ("null", JsonValue::Null),
+            ("true", JsonValue::Boolean(true)),
+            ("false", JsonValue::Boolean(false)),
+            ("42", JsonValue::Number(42.0)),
+            ("0", JsonValue::Number(0.0)),
+            ("-10", JsonValue::Number(-10.0)),
+            (r#""hello""#, JsonValue::String("hello".to_string())),
+        ];
+
+        for (input, expected) in test_cases {
+            let result = parse_json(input)?;
+            assert_eq!(result, expected, "Failed for input: {}", input);
+        }
 
         Ok(())
     }
