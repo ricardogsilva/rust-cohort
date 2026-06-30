@@ -8,11 +8,10 @@ pub enum JsonValue {
 }
 
 impl JsonValue {
-    
     pub fn is_null(&self) -> bool {
         matches!(self, JsonValue::Null)
     }
-    
+
     pub fn as_str(&self) -> Option<&str> {
         match self {
             // the module hints have this as `Some(owned_string.as_str())` instead
@@ -20,14 +19,14 @@ impl JsonValue {
             _ => None,
         }
     }
-    
+
     pub fn as_f64(&self) -> Option<f64> {
         match self {
             JsonValue::Number(num_val) => Some(*num_val),
             _ => None,
         }
     }
-    
+
     pub fn as_bool(&self) -> Option<bool> {
         match *self {
             JsonValue::Boolean(bool_val) => Some(bool_val),

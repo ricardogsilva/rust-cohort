@@ -34,12 +34,30 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, JsonError> {
     while let Some(&ch) = chars.peek() {
         // look at the next char in the iterator, without actually consuming it
         match ch {
-            '{' => { tokens.push(Token::LeftBrace); chars.next(); }
-            '}' => { tokens.push(Token::RightBrace); chars.next(); }
-            '[' => { tokens.push(Token::LeftBracket); chars.next(); }
-            ']' => { tokens.push(Token::RightBracket); chars.next(); }
-            ',' => { tokens.push(Token::Comma); chars.next(); }
-            ':' => { tokens.push(Token::Colon); chars.next(); }
+            '{' => {
+                tokens.push(Token::LeftBrace);
+                chars.next();
+            }
+            '}' => {
+                tokens.push(Token::RightBrace);
+                chars.next();
+            }
+            '[' => {
+                tokens.push(Token::LeftBracket);
+                chars.next();
+            }
+            ']' => {
+                tokens.push(Token::RightBracket);
+                chars.next();
+            }
+            ',' => {
+                tokens.push(Token::Comma);
+                chars.next();
+            }
+            ':' => {
+                tokens.push(Token::Colon);
+                chars.next();
+            }
             '"' => {
                 chars.next(); // consume opening quote - throw it away
                 let mut string_value = String::new();
@@ -56,7 +74,10 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, JsonError> {
                 }
                 if !string_terminated {
                     eprintln!("There is an unterminated string literal");
-                    return Err(JsonError::UnexpectedEndOfInput { expected: "JSON value".to_string(), position: 0 })
+                    return Err(JsonError::UnexpectedEndOfInput {
+                        expected: "JSON value".to_string(),
+                        position: 0,
+                    });
                 }
                 tokens.push(Token::String(string_value));
             }
@@ -84,11 +105,10 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, JsonError> {
                         eprintln!(
                             "Found an error while parsing {number_as_string} as a number: {err:?}"
                         );
-                        return Err(
-                            JsonError::InvalidNumber { 
-                                value: number_as_string, 
-                                position: 0 }
-                        )
+                        return Err(JsonError::InvalidNumber {
+                            value: number_as_string,
+                            position: 0,
+                        });
                     }
                 }
             }
@@ -112,26 +132,25 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, JsonError> {
                     "null" => tokens.push(Token::Null),
                     _ => {
                         eprintln!("Found an unexpected keyword {keyword_as_string}");
-                        return Err(
-                            JsonError::UnexpectedToken { 
-                                expected: "Either true, false or null".to_string(), 
-                                found: keyword_as_string, 
-                                position: 0 
-                            }
-                        )
+                        return Err(JsonError::UnexpectedToken {
+                            expected: "Either true, false or null".to_string(),
+                            found: keyword_as_string,
+                            position: 0,
+                        });
                     }
                 }
             }
-            ' ' | '\n' | '\r' | '\t' => { chars.next(); }  // whitespace does not need to be captured
-            _ => { 
-                eprintln!("Found an unexpected character: {ch}"); chars.next(); 
-                return Err(
-                    JsonError::UnexpectedToken { 
-                        expected: "valid JSON token".to_string(), 
-                        found: ch.to_string(), 
-                        position: 0 
-                    }
-                )
+            ' ' | '\n' | '\r' | '\t' => {
+                chars.next();
+            } // whitespace does not need to be captured
+            _ => {
+                eprintln!("Found an unexpected character: {ch}");
+                chars.next();
+                return Err(JsonError::UnexpectedToken {
+                    expected: "valid JSON token".to_string(),
+                    found: ch.to_string(),
+                    position: 0,
+                });
             }
         }
     }
@@ -147,7 +166,7 @@ mod tests {
     type Result<T> = std::result::Result<T, JsonError>;
 
     // string boundary tests
-    
+
     #[test]
     fn test_empty_string() -> Result<()> {
         let tokens = tokenize(r#""""#)?;
@@ -155,7 +174,7 @@ mod tests {
         assert_eq!(tokens[0], Token::String("".to_string()));
         Ok(())
     }
-    
+
     #[test]
     fn test_string_containing_json_special_chars() -> Result<()> {
         let tokens = tokenize(r#""{key: value}""#)?;
@@ -163,7 +182,7 @@ mod tests {
         assert_eq!(tokens[0], Token::String("{key: value}".to_string()));
         Ok(())
     }
-    
+
     #[test]
     fn test_string_with_keyword_like_content() -> Result<()> {
         let tokens = tokenize(r#""not true or false""#)?;
@@ -171,7 +190,7 @@ mod tests {
         assert_eq!(tokens[0], Token::String("not true or false".to_string()));
         Ok(())
     }
-    
+
     #[test]
     fn test_string_with_number_like_content() -> Result<()> {
         let tokens = tokenize(r#""phone: 555-1234""#)?;
@@ -183,7 +202,7 @@ mod tests {
     // number parsing tests
 
     #[test]
-    fn test_negative_number() -> Result<()>{
+    fn test_negative_number() -> Result<()> {
         let tokens = tokenize("-42")?;
         assert_eq!(tokens.len(), 1);
         assert_eq!(tokens[0], Token::Number(-42.0));
@@ -198,14 +217,16 @@ mod tests {
         Ok(())
     }
 
-
     // test parsing errors
-    
+
     #[test]
     fn test_leading_decimal_not_a_number() {
         // .5 is invalid JSON
         let err = tokenize(".5").unwrap_err();
-        assert!(matches!(err, JsonError::UnexpectedToken { position: 0, .. }));
+        assert!(matches!(
+            err,
+            JsonError::UnexpectedToken { position: 0, .. }
+        ));
     }
 
     #[test]
@@ -213,7 +234,7 @@ mod tests {
         let err = tokenize(r#""missing end quote"#).unwrap_err();
         match err {
             JsonError::UnexpectedEndOfInput { position, .. } => assert_eq!(position, 0),
-            other => panic!("Expected UnexpectedEndOfInput error, got {:?}", other)
+            other => panic!("Expected UnexpectedEndOfInput error, got {:?}", other),
         }
     }
 

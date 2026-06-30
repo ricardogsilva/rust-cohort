@@ -18,7 +18,7 @@ pub enum JsonError {
 }
 
 // Display trait for JsonError
-// Why do we need this? Because it enables using the `.to_string()` method and 
+// Why do we need this? Because it enables using the `.to_string()` method and
 // also enables calling `format!("{}")`
 impl fmt::Display for JsonError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -45,7 +45,7 @@ impl fmt::Display for JsonError {
 }
 
 // Error trait for JsonError
-// Why do we need this? Because all errors must implement the Error trait in 
+// Why do we need this? Because all errors must implement the Error trait in
 // order to be usable in a Result<T, E>.
 // The implementation is just this oneliner because the `Error` trait only requires
 // that both the `Debug` and the `Display` traits be implemented - We already

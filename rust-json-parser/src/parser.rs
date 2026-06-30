@@ -12,12 +12,10 @@ type Result<T> = std::result::Result<T, JsonError>;
 pub fn parse_json(json_text: &str) -> Result<JsonValue> {
     let tokens = tokenize(json_text)?;
     if tokens.is_empty() {
-        return Err(
-            JsonError::UnexpectedEndOfInput { 
-                expected: "JSON value".to_string(), 
-                position: 0 
-            }
-        )
+        return Err(JsonError::UnexpectedEndOfInput {
+            expected: "JSON value".to_string(),
+            position: 0,
+        });
     }
     match &tokens[0] {
         Token::Boolean(bool_value) => Ok(JsonValue::Boolean(*bool_value)),
@@ -28,16 +26,12 @@ pub fn parse_json(json_text: &str) -> Result<JsonValue> {
             // How could we make it move the string instead?
             // The module hints have this as `Ok(JsonValue::String(string_val.clone()))`
             Ok(JsonValue::String(string_val.to_string()))
-        },
-        _ => {
-            Err(
-                JsonError::UnexpectedToken { 
-                    expected: "Only boolean, number, string and null are supported for now".to_string(), 
-                    found: (format!("{:?}", tokens[0])), 
-                    position: 0
-                }
-            )
-        },
+        }
+        _ => Err(JsonError::UnexpectedToken {
+            expected: "Only boolean, number, string and null are supported for now".to_string(),
+            found: (format!("{:?}", tokens[0])),
+            position: 0,
+        }),
     }
 }
 
@@ -50,8 +44,8 @@ mod tests {
 
     #[test]
     // FIXME: understand why tests now return something?
-    fn test_parse_string() -> Result<()>{
-        // using the ? operator here means the test will immediately fail 
+    fn test_parse_string() -> Result<()> {
+        // using the ? operator here means the test will immediately fail
         // if result is an error
         let result = parse_json(r#""hello world""#)?;
         assert_eq!(result, JsonValue::String("hello world".to_string()));
@@ -62,13 +56,13 @@ mod tests {
     fn test_parse_number() -> Result<()> {
         let result = parse_json("42.5")?;
         assert_eq!(result, JsonValue::Number(42.5));
-        
+
         let result = parse_json("0")?;
         assert_eq!(result, JsonValue::Number(0.0));
-        
+
         let result = parse_json("-10")?;
         assert_eq!(result, JsonValue::Number(-10.0));
-        
+
         Ok(())
     }
 
@@ -99,7 +93,7 @@ mod tests {
             Err(JsonError::UnexpectedEndOfInput { expected, position }) => {
                 assert_eq!(expected, "JSON value");
                 assert_eq!(position, 0);
-            },
+            }
             _ => panic!("Expected UnexpectedEndOfInput error"),
         }
     }
@@ -131,7 +125,7 @@ mod tests {
 
         let result = parse_json("@invalid@");
         match result {
-            Err(JsonError::UnexpectedToken { .. }) => {},
+            Err(JsonError::UnexpectedToken { .. }) => {}
             _ => panic!("Expected UnexpectedTokenError error"),
         }
     }
