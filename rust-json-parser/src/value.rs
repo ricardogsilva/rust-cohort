@@ -14,8 +14,7 @@ impl JsonValue {
 
     pub fn as_str(&self) -> Option<&str> {
         match self {
-            // the module hints have this as `Some(owned_string.as_str())` instead
-            JsonValue::String(owned_string) => Some(&owned_string),
+            JsonValue::String(owned_string) => Some(owned_string.as_str()),
             _ => None,
         }
     }

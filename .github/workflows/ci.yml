@@ -20,7 +20,7 @@ jobs:
         run: cd rust-json-parser && cargo fmt --check
 
       - name: Lint code
-        run: cd rust-json-parser && cargo clippy
+        run: cd rust-json-parser && cargo clippy -- --deny warnings
 
       - name: Build
         run: cd rust-json-parser && cargo build --verbose
