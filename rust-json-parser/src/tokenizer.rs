@@ -100,7 +100,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, JsonError> {
                 let number_value = number_as_string.parse::<f64>();
                 match number_value {
                     Ok(value) => tokens.push(Token::Number(value)),
-                    Err(err) => {
+                    Err(..) => {
                         return Err(JsonError::InvalidNumber {
                             value: number_as_string,
                             position: 0,
@@ -228,9 +228,10 @@ mod tests {
     fn test_unterminated_string() {
         let err = tokenize(r#""missing end quote"#).unwrap_err();
         assert_matches!(
-            err, 
+            err,
             JsonError::UnexpectedEndOfInput { position: 0, .. },
-            "Expected UnexpectedEndOfInput error, got {}", err
+            "Expected UnexpectedEndOfInput error, got {}",
+            err
         );
     }
 
