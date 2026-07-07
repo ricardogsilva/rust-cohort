@@ -73,7 +73,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, JsonError> {
                     chars.next();
                 }
                 if !string_terminated {
-                    eprintln!("There is an unterminated string literal");
                     return Err(JsonError::UnexpectedEndOfInput {
                         expected: "JSON value".to_string(),
                         position: 0,
@@ -102,9 +101,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, JsonError> {
                 match number_value {
                     Ok(value) => tokens.push(Token::Number(value)),
                     Err(err) => {
-                        eprintln!(
-                            "Found an error while parsing {number_as_string} as a number: {err:?}"
-                        );
                         return Err(JsonError::InvalidNumber {
                             value: number_as_string,
                             position: 0,
@@ -131,7 +127,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, JsonError> {
                     "false" => tokens.push(Token::Boolean(false)),
                     "null" => tokens.push(Token::Null),
                     _ => {
-                        eprintln!("Found an unexpected keyword {keyword_as_string}");
                         return Err(JsonError::UnexpectedToken {
                             expected: "Either true, false or null".to_string(),
                             found: keyword_as_string,
@@ -144,7 +139,6 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, JsonError> {
                 chars.next();
             } // whitespace does not need to be captured
             _ => {
-                eprintln!("Found an unexpected character: {ch}");
                 chars.next();
                 return Err(JsonError::UnexpectedToken {
                     expected: "valid JSON token".to_string(),
