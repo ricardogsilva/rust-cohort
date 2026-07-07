@@ -156,6 +156,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, JsonError> {
 mod tests {
     use super::*;
     use crate::error::JsonError;
+    use std::assert_matches;
 
     type Result<T> = std::result::Result<T, JsonError>;
 
@@ -226,10 +227,11 @@ mod tests {
     #[test]
     fn test_unterminated_string() {
         let err = tokenize(r#""missing end quote"#).unwrap_err();
-        match err {
-            JsonError::UnexpectedEndOfInput { position, .. } => assert_eq!(position, 0),
-            other => panic!("Expected UnexpectedEndOfInput error, got {:?}", other),
-        }
+        assert_matches!(
+            err, 
+            JsonError::UnexpectedEndOfInput { position: 0, .. },
+            "Expected UnexpectedEndOfInput error, got {}", err
+        );
     }
 
     // other tests from week1

@@ -27,8 +27,8 @@ impl JsonValue {
     }
 
     pub fn as_bool(&self) -> Option<bool> {
-        match *self {
-            JsonValue::Boolean(bool_val) => Some(bool_val),
+        match self {
+            JsonValue::Boolean(bool_val) => Some(*bool_val),
             _ => None,
         }
     }
