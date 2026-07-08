@@ -24,8 +24,7 @@ pub fn parse_json(json_text: &str) -> Result<JsonValue> {
         Token::String(string_val) => {
             // - Is this copying the token's string onto the value's?
             // How could we make it move the string instead?
-            // The module hints have this as `Ok(JsonValue::String(string_val.clone()))`
-            Ok(JsonValue::String(string_val.to_string()))
+            Ok(JsonValue::String(string_val.clone()))
         }
         _ => Err(JsonError::UnexpectedToken {
             expected: "Only boolean, number, string and null are supported for now".to_string(),
