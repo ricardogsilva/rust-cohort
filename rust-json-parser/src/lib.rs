@@ -7,7 +7,7 @@ mod value;
 // re-export types and functions (note the `pub` modifier) to make them easier to call by third-party code
 pub use error::JsonError;
 pub use parser::parse_json;
-pub use tokenizer::{Token, tokenize};
+pub use tokenizer::{Token, Tokenizer};
 pub use value::JsonValue;
 
 // convenience type alias - this lets us refer to Result<JsonValue> instead of Result<JsonValue, JsonError>

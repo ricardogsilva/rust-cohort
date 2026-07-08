@@ -1,5 +1,5 @@
 use crate::error::JsonError;
-use crate::tokenizer::{Token, tokenize};
+use crate::tokenizer::{Token, Tokenizer};
 use crate::value::JsonValue;
 
 // this is a type alias and we define it just for convenience
@@ -10,7 +10,8 @@ use crate::value::JsonValue;
 type Result<T> = std::result::Result<T, JsonError>;
 
 pub fn parse_json(json_text: &str) -> Result<JsonValue> {
-    let tokens = tokenize(json_text)?;
+    let mut tokenizer = Tokenizer::new(json_text);
+    let tokens = tokenizer.tokenize()?;
     if tokens.is_empty() {
         return Err(JsonError::UnexpectedEndOfInput {
             expected: "JSON value".to_string(),

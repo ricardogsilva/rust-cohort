@@ -15,6 +15,14 @@ pub enum JsonError {
         value: String,
         position: usize,
     },
+    InvalidEscape { 
+        char: char, 
+        position: usize,
+    },
+    InvalidUnicode {
+        sequence: String,
+        position: usize,
+    },
 }
 
 // Display trait for JsonError
@@ -39,6 +47,12 @@ impl fmt::Display for JsonError {
             }
             JsonError::InvalidNumber { value, position } => {
                 write!(f, "Value: {} - position {}", value, position)
+            }
+            JsonError::InvalidEscape { char, position } => {
+                write!(f, "Char: {} - position {}", char, position)
+            }
+            JsonError::InvalidUnicode { sequence, position } => {
+                write!(f, "Sequence: {} - position {}", sequence, position)
             }
         }
     }
@@ -87,9 +101,14 @@ mod tests {
             position: 0,
         };
 
+        let escape_error = JsonError::InvalidEscape { char: 'b', position: 0 };
+        let unicode_error = JsonError::InvalidUnicode { sequence: "something".to_string(), position: 0 };
+
         assert!(!format!("{:?}", token_error).is_empty());
         assert!(!format!("{:?}", eof_error).is_empty());
         assert!(!format!("{:?}", num_error).is_empty());
+        assert!(!format!("{:?}", escape_error).is_empty());
+        assert!(!format!("{:?}", unicode_error).is_empty());
     }
 
     #[test]
