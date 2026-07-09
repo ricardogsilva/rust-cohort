@@ -49,10 +49,10 @@ impl fmt::Display for JsonError {
                 write!(f, "Value: {} - position {}", value, position)
             }
             JsonError::InvalidEscape { char, position } => {
-                write!(f, "Char: {} - position {}", char, position)
+                write!(f, "Invalid escape char: {} - position {}", char, position)
             }
             JsonError::InvalidUnicode { sequence, position } => {
-                write!(f, "Sequence: {} - position {}", sequence, position)
+                write!(f, "Invalid Unicode sequence: {} - position {}", sequence, position)
             }
         }
     }
@@ -123,5 +123,33 @@ mod tests {
         assert!(message.contains("position 0"));
         assert!(message.contains("valid JSON"));
         assert!(message.contains("@"));
+    }
+
+    #[test]
+    fn test_invalid_escape_display() {
+        let err = JsonError::InvalidEscape { char: 'q', position: 5 };
+        let msg = format!("{}", err);
+        assert!(msg.contains("escape"));
+        assert!(msg.contains("q"));
+    }
+    
+    #[test]
+    fn test_invalid_unicode_display() {
+        let err = JsonError::InvalidUnicode { 
+            sequence: "00GG".to_string(), 
+            position: 3 
+        };
+        let msg = format!("{}", err);
+        assert!(msg.contains("unicode") || msg.contains("Unicode"));
+    }
+    
+    #[test]
+    fn test_error_is_std_error() {
+        let err = JsonError::InvalidEscape { 
+            char: 'x',
+            position: 0 
+        };
+        // this is checking if the error implements the Error trait somehow
+        let _: &dyn std::error::Error = &err;
     }
 }
