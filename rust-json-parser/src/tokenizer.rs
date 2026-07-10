@@ -544,6 +544,36 @@ mod tests {
         assert_eq!(tokens, vec![Token::String("😀".to_string())]);
     }
 
+    #[test]
+    fn test_is_at_end() {
+        let mut tokenizer = Tokenizer::new("1");
+        assert_eq!(tokenizer.is_at_end(), false);
+        tokenizer.advance();
+        assert_eq!(tokenizer.is_at_end(), true);
+    }
+
+    #[test]
+    fn test_advancing_sequence() {
+        let mut tokenizer = Tokenizer::new("123");
+        assert_eq!(tokenizer.advance(), Some('1'));
+        assert_eq!(tokenizer.advance(), Some('2'));
+        assert_eq!(tokenizer.advance(), Some('3'));
+        assert_eq!(tokenizer.advance(), None);
+    }
+
+    #[test]
+    fn test_peek_doesnt_advance() {
+        let mut tokenizer = Tokenizer::new("ab");
+
+        // Multiple peeks should return the same thing
+        assert_eq!(tokenizer.peek(), Some('a'));
+        assert_eq!(tokenizer.peek(), Some('a'));
+        assert_eq!(tokenizer.peek(), Some('a'));
+
+        // Position unchanged - advance still gets 'a'
+        assert_eq!(tokenizer.advance(), Some('a'));
+    }
+
     // tests carried over from week2 (adapted to work with Tokenizer struct)
 
     // string boundary tests
