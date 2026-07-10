@@ -1,5 +1,15 @@
 use crate::error::JsonError;
 
+// More about UTF-16 suplementary characters
+// https://en.wikipedia.org/wiki/UTF-16
+//
+// first (AKA high, AKA leading) surrogate pair has a value in the range 0xD800 to 0xDBFF
+const HIGH_SURROGATE_LOWER_BOUND: u32 = 0xD800;
+const HIGH_SURROGATE_UPPER_BOUND: u32 = 0xDBFF;
+// second (AKA low, AKA trailing) surrogate pair has a value in the range 0xDC00 to 0xDFFF
+const LOW_SURROGATE_LOWER_BOUND: u32 = 0xDC00;
+const LOW_SURROGATE_UPPER_BOUND: u32 = 0xDFFF;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Boolean(bool),
@@ -86,7 +96,7 @@ impl Tokenizer {
                                                 Some(ch) => unicode_hex_string.push(ch),
                                                 None => {
                                                     return Err(JsonError::InvalidUnicode {
-                                                        sequence: unicode_hex_string.clone(),
+                                                        sequence: unicode_hex_string,
                                                         position: self.position,
                                                     });
                                                 }
@@ -95,17 +105,104 @@ impl Tokenizer {
                                         }
                                         match u32::from_str_radix(&unicode_hex_string, 16) {
                                             Ok(value) => {
-                                                match char::from_u32(value) {
-                                                    Some(v) => string_value.push(v),
-                                                    None => {
-                                                        return Err(JsonError::InvalidUnicode {
-                                                            sequence: unicode_hex_string,
-                                                            position: self.position,
-                                                        });
+                                                match value >= HIGH_SURROGATE_LOWER_BOUND {
+                                                    true => {
+                                                        // can be first of a surrogate pair
+                                                        if value > HIGH_SURROGATE_UPPER_BOUND {
+                                                            return Err(
+                                                                JsonError::InvalidUnicode {
+                                                                    sequence: unicode_hex_string,
+                                                                    position: self.position,
+                                                                },
+                                                            );
+                                                        }
+                                                        // this moves the data of 'value' to 'high_surrogate_value' - cannot use 'value' anymore now
+                                                        let high_surrogate_value = value;
+
+                                                        // High surrogate must always be joined by low one. Therefore in order to be valid, the
+                                                        // next two chars have to be '\u', i.e. the start of another unicode escape sequence.
+                                                        // Since we don't care about those, let's advance two times (throw away the next '\u')
+                                                        // and try to parse its hex format
+                                                        self.advance(); // throw away '/'
+                                                        self.advance(); // throw away 'u'
+                                                        let mut second_surrogate_hex_string =
+                                                            String::new();
+                                                        let mut second_surrogate_char_count = 0;
+                                                        while second_surrogate_char_count < 4 {
+                                                            match self.advance() {
+                                                                Some(ch) => {
+                                                                    second_surrogate_hex_string
+                                                                        .push(ch)
+                                                                }
+                                                                None => {
+                                                                    return Err(
+                                                                        JsonError::InvalidUnicode {
+                                                                            sequence:
+                                                                                unicode_hex_string,
+                                                                            position: self.position,
+                                                                        },
+                                                                    );
+                                                                }
+                                                            }
+                                                            second_surrogate_char_count += 1;
+                                                        }
+                                                        let second_surrogate_unicode_code_point =
+                                                            u32::from_str_radix(
+                                                                &second_surrogate_hex_string,
+                                                                16,
+                                                            );
+                                                        match second_surrogate_unicode_code_point {
+                                                            Ok(low_surrogate_value) => {
+                                                                if !(LOW_SURROGATE_LOWER_BOUND
+                                                                    ..=LOW_SURROGATE_UPPER_BOUND)
+                                                                    .contains(&low_surrogate_value)
+                                                                {
+                                                                    return Err(
+                                                                        JsonError::InvalidUnicode { sequence: second_surrogate_hex_string, position: self.position }
+                                                                    );
+                                                                }
+                                                                // now decode both surrogate chars. As per the wikipedia article linked at the top of this file,
+                                                                // decoding can be done like this (example: decode U+10437 (𐐷) from UTF-16):
+                                                                // Take high surrogate (0xD801) and subtract 0xD800, then multiply by 0x400, resulting in 0x0001 × 0x400 = 0x0400.
+                                                                // Take low surrogate (0xDC37) and subtract 0xDC00, resulting in 0x37.
+                                                                // Add these two results together (0x0437), and finally add 0x10000 to get the final code point, 0x10437.
+                                                                let pair_code_point = 0x10000 + (high_surrogate_value - HIGH_SURROGATE_LOWER_BOUND) * 0x400 + (low_surrogate_value - LOW_SURROGATE_LOWER_BOUND);
+                                                                match char::from_u32(pair_code_point) {
+                                                                    Some(v) => string_value.push(v),
+                                                                    None => return Err(
+                                                                        JsonError::InvalidUnicode { sequence: second_surrogate_hex_string, position: self.position }
+                                                                    )
+                                                                }
+                                                                parsing_escape_sequence = false;
+                                                                continue;
+                                                            }
+                                                            Err(..) => return Err(
+                                                                JsonError::InvalidUnicode {
+                                                                    sequence:
+                                                                        second_surrogate_hex_string,
+                                                                    position: self.position,
+                                                                },
+                                                            ),
+                                                        }
+                                                    }
+                                                    false => {
+                                                        // just a normal code point
+                                                        match char::from_u32(value) {
+                                                            Some(v) => string_value.push(v),
+                                                            None => {
+                                                                return Err(
+                                                                    JsonError::InvalidUnicode {
+                                                                        sequence:
+                                                                            unicode_hex_string,
+                                                                        position: self.position,
+                                                                    },
+                                                                );
+                                                            }
+                                                        }
+                                                        parsing_escape_sequence = false;
+                                                        continue;
                                                     }
                                                 }
-                                                parsing_escape_sequence = false;
-                                                continue;
                                             }
                                             Err(..) => {
                                                 return Err(JsonError::InvalidUnicode {
@@ -438,6 +535,13 @@ mod tests {
         let mut tokenizer = Tokenizer::new(r#""hello\n"#);
         let tokens = tokenizer.tokenize();
         assert!(tokens.is_err());
+    }
+
+    #[test]
+    fn test_unicode_surrogate_pairs() {
+        let mut tokenizer = Tokenizer::new(r#""\uD83D\uDE00""#);
+        let tokens = tokenizer.tokenize().unwrap();
+        assert_eq!(tokens, vec![Token::String("😀".to_string())]);
     }
 
     // tests carried over from week2 (adapted to work with Tokenizer struct)
