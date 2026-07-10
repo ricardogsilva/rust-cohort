@@ -1,29 +1,54 @@
-use rust_json_parser::{JsonError, parse_json};
+use rust_json_parser::{JsonError, JsonParser};
 
 fn main() {
-    match parse_json(r#""The quick brown fox jumps over the lazy dog""#) {
-        Ok(json_value) => println!("Valid str input: {:?}", json_value),
-        Err(e) => println!("Got an unexpected error while parsing str: {e}"),
+    // note how `Ok(mut parser)` is valid rust.
+    // we could also write like this:
+    //
+    //
+    // let parser = match JsonParser::new(r#""The quick brown fox jumps over the lazy dog""#) {
+    //     Ok(mut p) => {
+    //         match p.parse {}
+    //     }
+    // }
+    //
+    // // now use `parser` to do immutable things
+    //
+    // In this example code above, `p` is mutable but `parser` is not
+    match JsonParser::new(r#""The quick brown fox jumps over the lazy dog""#) {
+        Ok(mut parser) => match parser.parse() {
+            Ok(value) => println!("Valid str input: {:?}", value),
+            Err(e) => eprintln!("Got an unexpected error while parsing input: {e}"),
+        },
+        Err(e) => eprintln!("Got an unexpected error while tokenizing input: {e}"),
     };
 
-    match parse_json("3.14159265358979") {
-        Ok(json_value) => println!("Valid f64 input: {:?}", json_value),
-        Err(e) => println!("Got an unexpected error while parsing f64 input: {e}"),
+    match JsonParser::new("3.14159265358979") {
+        Ok(mut parser) => match parser.parse() {
+            Ok(value) => println!("Valid f64 input: {:?}", value),
+            Err(e) => eprintln!("Got an unexpected error while parsing input: {e}"),
+        },
+        Err(e) => eprintln!("Got an unexpected error while tokenizing input: {e}"),
     }
 
-    match parse_json(r#""missing end quote"#) {
-        Ok(json_value) => panic!(
-            "Parsing should have failed but succeeded with {:?}, something is wrong",
-            json_value
-        ),
+    match JsonParser::new(r#""missing end quote"#) {
+        Ok(mut parser) => match parser.parse() {
+            Ok(value) => panic!(
+                "Tokenizing and parsing should have failed but succeeded with {:?}, something is wrong",
+                value
+            ),
+            Err(e) => panic!(
+                "Tokenizing should have failed but succeeded with {:?} and then parsing failed with {:?}, something is wrong",
+                parser, e
+            ),
+        },
         Err(e) => match e {
             JsonError::UnexpectedEndOfInput { .. } => {
-                println!("Parsing has failed with the expected error of {:?}", e)
+                println!("Tokenizing has failed with the expected error of {:?}", e)
             }
             _ => panic!(
-                "Parsing has failed as expected but did not produce the correct error. Got this instead {:?}",
+                "Tokenizing has failed as expected but did not produce the correct error. Got this instead {:?}",
                 e
             ),
         },
-    }
+    };
 }
