@@ -289,7 +289,8 @@ impl Tokenizer {
                         })
                     }
                 }
-            } else {  // its a normal code point, not part of a surrogate pair
+            } else {
+                // its a normal code point, not part of a surrogate pair
                 match char::from_u32(first_code_point) {
                     Some(v) => Ok(v),
                     None => Err(JsonError::InvalidUnicode {
