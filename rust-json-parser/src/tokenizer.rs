@@ -139,132 +139,19 @@ impl Tokenizer {
         self.advance(); // consume opening quote - throw it away
         let mut string_value = String::new();
         let mut string_terminated = false;
-        let mut parsing_escape_sequence = false;
-
         while let Some(next_ch) = self.peek() {
-            if parsing_escape_sequence {
-                match next_ch {
-                    '"' => string_value.push('\"'),
-                    '\\' => string_value.push('\\'),
-                    '/' => string_value.push('/'),
-                    'b' => string_value.push('\u{0008}'),
-                    'f' => string_value.push('\u{000C}'),
-                    'n' => string_value.push('\n'),
-                    'r' => string_value.push('\r'),
-                    't' => string_value.push('\t'),
-                    'u' => {
-                        self.advance(); // throw away the 'u'
-                        let unicode_hex_string = self.get_unicode_hex_string()?;
-                        match u32::from_str_radix(&unicode_hex_string, 16) {
-                            Ok(value) => {
-                                if value >= HIGH_SURROGATE_LOWER_BOUND {
-                                    if value > HIGH_SURROGATE_UPPER_BOUND {
-                                        return Err(JsonError::InvalidUnicode {
-                                            sequence: unicode_hex_string,
-                                            position: self.position,
-                                        });
-                                    }
-                                    // this moves the data of 'value' to 'high_surrogate_value' - cannot use 'value' anymore now
-                                    let high_surrogate_value = value;
-
-                                    // A high surrogate must always be joined by a low one. In order to be valid, the
-                                    // next two chars have to be '\u', i.e. the start of another unicode escape sequence.
-                                    // We don't care about those so let's advance two times (throw away the next '\u')
-                                    // and try to parse its hex format
-                                    self.advance();
-                                    self.advance();
-                                    let second_surrogate_hex_string =
-                                        self.get_unicode_hex_string()?;
-                                    match u32::from_str_radix(&second_surrogate_hex_string, 16) {
-                                        Ok(low_surrogate_value) => {
-                                            if !(LOW_SURROGATE_LOWER_BOUND
-                                                ..=LOW_SURROGATE_UPPER_BOUND)
-                                                .contains(&low_surrogate_value)
-                                            {
-                                                return Err(JsonError::InvalidUnicode {
-                                                    sequence: second_surrogate_hex_string,
-                                                    position: self.position,
-                                                });
-                                            }
-                                            // now decode both surrogate chars. As per the wikipedia article linked at the top of this file,
-                                            // decoding can be done like this (example: decode U+10437 (𐐷) from UTF-16):
-                                            // Take high surrogate (0xD801) and subtract 0xD800, then multiply by 0x400, resulting in 0x0001 × 0x400 = 0x0400.
-                                            // Take low surrogate (0xDC37) and subtract 0xDC00, resulting in 0x37.
-                                            // Add these two results together (0x0437), and finally add 0x10000 to get the final code point, 0x10437.
-                                            let pair_code_point = 0x10000
-                                                + (high_surrogate_value
-                                                    - HIGH_SURROGATE_LOWER_BOUND)
-                                                    * 0x400
-                                                + (low_surrogate_value - LOW_SURROGATE_LOWER_BOUND);
-                                            match char::from_u32(pair_code_point) {
-                                                Some(v) => string_value.push(v),
-                                                None => {
-                                                    return Err(JsonError::InvalidUnicode {
-                                                        sequence: second_surrogate_hex_string,
-                                                        position: self.position,
-                                                    });
-                                                }
-                                            }
-                                            parsing_escape_sequence = false;
-                                            continue;
-                                        }
-                                        Err(..) => {
-                                            return Err(JsonError::InvalidUnicode {
-                                                sequence: second_surrogate_hex_string,
-                                                position: self.position,
-                                            });
-                                        }
-                                    }
-                                } else {
-                                    match char::from_u32(value) {
-                                        Some(v) => string_value.push(v),
-                                        None => {
-                                            return Err(JsonError::InvalidUnicode {
-                                                sequence: unicode_hex_string,
-                                                position: self.position,
-                                            });
-                                        }
-                                    }
-                                    parsing_escape_sequence = false;
-                                    continue;
-                                }
-                            }
-                            Err(..) => {
-                                return Err(JsonError::InvalidUnicode {
-                                    sequence: unicode_hex_string,
-                                    position: self.position,
-                                });
-                            }
-                        }
-                    }
-                    _ => {
-                        return Err(JsonError::InvalidEscape {
-                            char: next_ch,
-                            position: self.position,
-                        });
-                    }
+            match next_ch {
+                '\\' => {
+                    string_value.push(self.parse_escape_sequence()?);
                 }
-                parsing_escape_sequence = false;
-                self.advance();
-            } else {
-                match next_ch {
-                    '\\' => {
-                        // begin escape sequence
-                        parsing_escape_sequence = true;
-                        self.advance();
-                        continue;
-                    }
-                    '"' => {
-                        // end of string
-                        self.advance();
-                        string_terminated = true;
-                        break;
-                    }
-                    _ => {
-                        // next_ch is part of the string
-                        string_value.push(next_ch);
-                        self.advance();
-                    }
+                '"' => {
+                    string_terminated = true;
+                    self.advance();
+                    break;
+                }
+                _ => {
+                    string_value.push(next_ch);
+                    self.advance();
                 }
             }
         }
@@ -272,6 +159,158 @@ impl Tokenizer {
             true => Ok(Token::String(string_value)),
             false => Err(JsonError::UnexpectedEndOfInput {
                 expected: "JSON value".to_string(),
+                position: self.position,
+            }),
+        }
+    }
+
+    fn parse_escape_sequence(&mut self) -> Result<char, JsonError> {
+        match self.advance() {
+            Some(current_ch) => match current_ch {
+                '\\' => match self.peek() {
+                    Some(next_ch) => match next_ch {
+                        '"' => {
+                            self.advance();
+                            Ok('\"')
+                        }
+                        '\\' => {
+                            self.advance();
+                            Ok('\\')
+                        }
+                        '/' => {
+                            self.advance();
+                            Ok('/')
+                        }
+                        'b' => {
+                            self.advance();
+                            Ok('\u{0008}')
+                        }
+                        'f' => {
+                            self.advance();
+                            Ok('\u{000C}')
+                        }
+                        'n' => {
+                            self.advance();
+                            Ok('\n')
+                        }
+                        'r' => {
+                            self.advance();
+                            Ok('\r')
+                        }
+                        't' => {
+                            self.advance();
+                            Ok('\t')
+                        }
+                        'u' => Ok(self.parse_unicode_escape_sequence()?),
+                        _ => Err(JsonError::InvalidEscape {
+                            char: next_ch,
+                            position: self.position + 1,
+                        }),
+                    },
+                    None => Err(JsonError::UnexpectedEndOfInput {
+                        expected: "JSON value".to_string(),
+                        position: self.position + 1,
+                    }),
+                },
+                _ => Err(JsonError::InvalidEscape {
+                    char: current_ch,
+                    position: self.position,
+                }),
+            },
+            None => Err(JsonError::UnexpectedEndOfInput {
+                expected: "JSON value".to_string(),
+                position: self.position,
+            }),
+        }
+    }
+
+    fn decode_utf16_surrogate_pair(high: u32, low: u32) -> Option<char> {
+        // As per the wikipedia article linked at the top of this file,
+        // decoding can be done like this (example: decode U+10437 (𐐷) from UTF-16):
+        // Take high surrogate (0xD801) and subtract 0xD800, then multiply by 0x400, resulting in 0x0001 × 0x400 = 0x0400.
+        // Take low surrogate (0xDC37) and subtract 0xDC00, resulting in 0x37.
+        // Add these two results together (0x0437), and finally add 0x10000 to get the final code point, 0x10437.
+        let pair_code_point = 0x10000
+            + (high - HIGH_SURROGATE_LOWER_BOUND) * 0x400
+            + (low - LOW_SURROGATE_LOWER_BOUND);
+        char::from_u32(pair_code_point)
+    }
+
+    fn parse_unicode_escape_sequence(&mut self) -> Result<char, JsonError> {
+        if self.advance().is_some() {
+            // does this sequence of unicode chars contain two codepoints?
+            let first_hex = self.get_unicode_hex_string()?;
+            let first_code_point = self.convert_hex_string_to_u32(&first_hex)?;
+            if first_code_point >= HIGH_SURROGATE_LOWER_BOUND {
+                if first_code_point > HIGH_SURROGATE_UPPER_BOUND {
+                    return Err(JsonError::InvalidUnicode {
+                        sequence: first_hex,
+                        position: self.position,
+                    });
+                }
+                let mut start_of_second_unicode_sequence = String::new();
+                for _ in 0..2 {
+                    match self.advance() {
+                        Some(ch) => {
+                            start_of_second_unicode_sequence.push(ch);
+                        }
+                        None => {
+                            return Err(JsonError::UnexpectedEndOfInput {
+                                expected: "JSON value".to_string(),
+                                position: self.position,
+                            });
+                        }
+                    }
+                }
+                if start_of_second_unicode_sequence != "\\u" {
+                    return Err(JsonError::InvalidUnicode {
+                        sequence: start_of_second_unicode_sequence.to_string(),
+                        position: self.position,
+                    });
+                }
+                let second_hex = self.get_unicode_hex_string()?;
+                let second_code_point = self.convert_hex_string_to_u32(&second_hex)?;
+                if !(LOW_SURROGATE_LOWER_BOUND..=LOW_SURROGATE_UPPER_BOUND)
+                    .contains(&second_code_point)
+                {
+                    return Err(JsonError::InvalidUnicode {
+                        sequence: second_hex,
+                        position: self.position,
+                    });
+                }
+                match Tokenizer::decode_utf16_surrogate_pair(first_code_point, second_code_point) {
+                    Some(v) => Ok(v),
+                    None => {
+                        let error_sequence = (first_hex + &second_hex).to_string();
+                        let error_position = self.position - error_sequence.len();
+                        Err(JsonError::InvalidUnicode {
+                            sequence: error_sequence,
+                            position: error_position,
+                        })
+                    }
+                }
+            } else {  // its a normal code point, not part of a surrogate pair
+                match char::from_u32(first_code_point) {
+                    Some(v) => Ok(v),
+                    None => Err(JsonError::InvalidUnicode {
+                        sequence: first_hex,
+                        position: self.position,
+                    }),
+                }
+            }
+        } else {
+            Err(JsonError::UnexpectedEndOfInput {
+                expected: "JSON value".to_string(),
+                position: self.position,
+            })
+        }
+    }
+
+    fn convert_hex_string_to_u32(&mut self, hex_string: &str) -> Result<u32, JsonError> {
+        match u32::from_str_radix(hex_string, 16) {
+            Ok(v) => Ok(v),
+            Err(..) => Err(JsonError::InvalidUnicode {
+                sequence: hex_string.to_string(),
                 position: self.position,
             }),
         }
@@ -495,14 +534,14 @@ mod tests {
 
     #[test]
     fn test_invalid_unicode_too_short() {
-        let mut tokenizer = Tokenizer::new(r#""\u{004}""#);
+        let mut tokenizer = Tokenizer::new(r#""\u004""#);
         let tokens = tokenizer.tokenize();
         assert!(matches!(tokens, Err(JsonError::InvalidUnicode { .. })));
     }
 
     #[test]
     fn test_invalid_unicode_bad_hex() {
-        let mut tokenizer = Tokenizer::new(r#""\u{00GG}""#);
+        let mut tokenizer = Tokenizer::new(r#""\u00GG""#);
         let tokens = tokenizer.tokenize();
         assert!(matches!(tokens, Err(JsonError::InvalidUnicode { .. })));
     }

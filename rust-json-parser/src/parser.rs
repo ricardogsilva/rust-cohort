@@ -48,8 +48,8 @@ impl JsonParser {
                     _ => Err(JsonError::UnexpectedToken {
                         expected: "Only boolean, number, string and null are supported for now"
                             .to_string(),
-                        found: (format!("{:?}", self.tokens[0])),
-                        position: 0,
+                        found: (format!("{:?}", token)),
+                        position: self.position,
                     }),
                 },
                 None => Err(JsonError::UnexpectedEndOfInput {
