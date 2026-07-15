@@ -6,8 +6,8 @@ mod value;
 
 // re-export types and functions (note the `pub` modifier) to make them easier to call by third-party code
 pub use error::JsonError;
-pub use parser::parse_json;
-pub use tokenizer::{Token, tokenize};
+pub use parser::JsonParser;
+pub use tokenizer::{Token, Tokenizer};
 pub use value::JsonValue;
 
 // convenience type alias - this lets us refer to Result<JsonValue> instead of Result<JsonValue, JsonError>
@@ -32,7 +32,8 @@ mod tests {
         ];
 
         for (input, expected) in test_cases {
-            let result = parse_json(input)?;
+            let mut parser = JsonParser::new(input)?;
+            let result = parser.parse()?;
             assert_eq!(result, expected, "Failed for input: {}", input);
         }
 
@@ -41,10 +42,10 @@ mod tests {
 
     #[test]
     fn test_error_propagation() {
-        let result = parse_json("@invalid@");
-        assert!(result.is_err());
+        let parser = JsonParser::new("@invalid@");
+        assert!(parser.is_err());
 
-        match result {
+        match parser {
             Err(JsonError::UnexpectedToken {
                 expected,
                 found,
