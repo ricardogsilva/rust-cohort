@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-// use std::fmt;
+use std::fmt;
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum JsonValue {
@@ -11,18 +12,63 @@ pub enum JsonValue {
     Object(HashMap<String, JsonValue>),
 }
 
-// impl fmt::Display for JsonValue {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         match self {
-//             JsonValue::Boolean(v) => write!(f, "{v}"),
-//             JsonValue::Null => write!(f, "null"),
-//             JsonValue::Number(v) => write!(f, "{v}"),
-//             JsonValue::String(v) => write!(f, "{v}"),
-//             JsonValue::Array(v) => write!(f, "{v}"),
-//             JsonValue::Object(v) => write!(f, "{v}"),
-//         }
-//     }
-// }
+
+fn display_json_string(original: &str) -> String {
+    let mut result = String::new();
+    for ch in original.chars() {
+        match ch {
+            '"' => result.push_str("\\\""),
+            '\\' => result.push_str("\\\\"),
+            '\u{0008}' => result.push_str("\\b"),
+            '\u{000C}' => result.push_str("\\f"),
+            '\n' => result.push_str("\\n"),
+            '\t' => result.push_str("\\t"),
+            '/' => result.push_str("\\/"),
+            // The JSON RFC's section 7 on Strings mentions that the first unicode 
+            // code points not already covered above up until 0x20 must always be escaped
+            // - I found it a bit thick to understand, but basically its grammar defines 
+            // the 'unescaped' term and being any codepoint that is not 
+            // 0x20, 0x21, 0x23-0x5B and 0x5D-0x10FFFF to require explicit escaping
+            c if (c as u32) < 0x20 => result.push_str(&format!("\\u{:04x}", c as u32)),
+            _ => result.push(ch),
+        }
+    }
+    result
+}
+
+
+impl fmt::Display for JsonValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            JsonValue::Boolean(v) => write!(f, "{v}"),
+            JsonValue::Null => write!(f, "null"),
+            JsonValue::Number(v) => {
+                write!(f, "{v}")
+            }
+            JsonValue::String(v) => write!(f, "{}", display_json_string(v)),
+            JsonValue::Array(v) => {
+                write!(f, "[")?;
+                for (index, item) in v.iter().enumerate() {
+                    write!(f, "{item}")?;
+                    if index < v.len() - 1 {
+                        write!(f, ",")?;
+                    }
+                }
+                write!(f, "]")
+            }
+            JsonValue::Object(v) => {
+                write!(f, "{{")?;
+                for (index, (key, value)) in v.iter().enumerate() {
+                    write!(f, "{key}: {value}")?;
+                    if index < v.len() - 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                write!(f, "}}")
+            }
+        }
+    }
+}
 
 impl JsonValue {
     pub fn is_null(&self) -> bool {
@@ -76,6 +122,64 @@ impl JsonValue {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::JsonParser;
+
+    #[test]
+    fn test_display_primitives() {
+        assert_eq!(JsonValue::Null.to_string(), "null");
+        assert_eq!(JsonValue::Boolean(true).to_string(), "true");
+        assert_eq!(JsonValue::Boolean(false).to_string(), "false");
+        assert_eq!(JsonValue::Number(42.0).to_string(), "42");
+        assert_eq!(JsonValue::Number(3.14).to_string(), "3.14");
+        assert_eq!(JsonValue::String("hello".to_string()).to_string(), "\"hello\"");
+    }
+    
+    #[test]
+    fn test_display_array() {
+        let value = JsonValue::Array(vec![
+            JsonValue::Number(1.0),
+            JsonValue::Number(2.0),
+        ]);
+        assert_eq!(value.to_string(), "[1,2]");
+    }
+    
+    #[test]
+    fn test_display_empty_containers() {
+        assert_eq!(JsonValue::Array(vec![]).to_string(), "[]");
+        assert_eq!(JsonValue::Object(HashMap::new()).to_string(), "{}");
+    }
+    
+    #[test]
+    fn test_display_escape_string() {
+        let value = JsonValue::String("hello\nworld".to_string());
+        assert_eq!(value.to_string(), "\"hello\\nworld\"");
+    }
+    
+    #[test]
+    fn test_display_escape_quotes() {
+        let value = JsonValue::String("say \"hi\"".to_string());
+        assert_eq!(value.to_string(), "\"say \\\"hi\\\"\"");
+    }
+    
+    #[test]
+    fn test_display_nested() {
+        let mut parser = JsonParser::new(r#"{"arr": [1, 2]}"#).unwrap();
+        let value = parser.parse().unwrap();
+        let output = value.to_string();
+        // Object key order may vary, so check components
+        assert!(output.contains("\"arr\""));
+        assert!(output.contains("[1,2]"));
+    }
+    
+    #[test]
+    fn test_display_nested_array() {
+        let value = JsonValue::Array(vec![
+            JsonValue::Array(vec![JsonValue::Number(1.0), JsonValue::Number(2.0)]),
+        ]);
+        assert_eq!(value.to_string(), "[[1,2]]");
+    }
+
+    // tests carried over from week 3
 
     #[test]
     fn test_json_value_equality() {
