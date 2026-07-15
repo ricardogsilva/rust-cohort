@@ -1,11 +1,28 @@
+use std::collections::HashMap;
+// use std::fmt;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum JsonValue {
     Boolean(bool),
     Null,
     Number(f64),
     String(String),
-    // todo: support complex types (array, object)
+    Array(Vec<JsonValue>),
+    Object(HashMap<String, JsonValue>),
 }
+
+// impl fmt::Display for JsonValue {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         match self {
+//             JsonValue::Boolean(v) => write!(f, "{v}"),
+//             JsonValue::Null => write!(f, "null"),
+//             JsonValue::Number(v) => write!(f, "{v}"),
+//             JsonValue::String(v) => write!(f, "{v}"),
+//             JsonValue::Array(v) => write!(f, "{v}"),
+//             JsonValue::Object(v) => write!(f, "{v}"),
+//         }
+//     }
+// }
 
 impl JsonValue {
     pub fn is_null(&self) -> bool {
@@ -31,6 +48,28 @@ impl JsonValue {
             JsonValue::Boolean(bool_val) => Some(*bool_val),
             _ => None,
         }
+    }
+
+    pub fn as_array(&self) -> Option<&Vec<JsonValue>> {
+        match self {
+            JsonValue::Array(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn as_object(&self) -> Option<&HashMap<String, JsonValue>> {
+        match self {
+            JsonValue::Object(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn get(&self, key: &str) -> Option<&JsonValue> {
+        self.as_object()?.get(key)
+    }
+
+    pub fn get_index(&self, index: usize) -> Option<&JsonValue> {
+        self.as_array()?.get(index)
     }
 }
 
