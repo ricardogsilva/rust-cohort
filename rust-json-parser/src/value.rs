@@ -42,7 +42,7 @@ impl fmt::Display for JsonValue {
             JsonValue::Number(v) => match v.fract() {
                 // check the formatting syntax at: https://doc.rust-lang.org/std/fmt/index.html
                 0.0 => write!(f, "{v:.0}"),
-                _ => write!(f, "{v}")
+                _ => write!(f, "{v}"),
             },
             JsonValue::String(v) => write!(f, "\"{}\"", display_json_string(v)),
             JsonValue::Array(v) => {
