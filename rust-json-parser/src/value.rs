@@ -39,7 +39,11 @@ impl fmt::Display for JsonValue {
         match self {
             JsonValue::Boolean(v) => write!(f, "{v}"),
             JsonValue::Null => write!(f, "null"),
-            JsonValue::Number(v) => write!(f, "{v}"),
+            JsonValue::Number(v) => match v.fract() {
+                // check the formatting syntax at: https://doc.rust-lang.org/std/fmt/index.html
+                0.0 => write!(f, "{v:.0}"),
+                _ => write!(f, "{v}")
+            },
             JsonValue::String(v) => write!(f, "\"{}\"", display_json_string(v)),
             JsonValue::Array(v) => {
                 write!(f, "[")?;
@@ -118,6 +122,14 @@ impl JsonValue {
 mod tests {
     use super::*;
     use crate::parser::JsonParser;
+
+    #[test]
+    fn test_display_numbers() {
+        assert_eq!(JsonValue::Number(42.0).to_string(), "42");
+        assert_eq!(JsonValue::Number(42.5).to_string(), "42.5");
+        assert_eq!(JsonValue::Number(-42.0).to_string(), "-42");
+        assert_eq!(JsonValue::Number(-42.5).to_string(), "-42.5");
+    }
 
     #[test]
     fn test_display_primitives() {
