@@ -70,6 +70,72 @@ impl JsonValue {
         matches!(self, JsonValue::Null)
     }
 
+    pub fn pretty_print(val: &JsonValue, depth: Option<usize>, indent: Option<usize>) -> String {
+        let chosen_depth = depth.unwrap_or(0);
+        let chosen_indent = indent.unwrap_or(2);
+        match val {
+            JsonValue::Null => String::from("null"),
+            JsonValue::Boolean(v) => v.to_string(),
+            JsonValue::Number(v) => v.to_string(),
+            JsonValue::String(v) => format!("\"{}\"", display_json_string(&v)),
+            JsonValue::Array(v) => JsonValue::pretty_print_array(v, chosen_depth, chosen_indent),
+            JsonValue::Object(v) => JsonValue::pretty_print_object(v, chosen_depth, chosen_indent),
+        }
+    }
+
+    fn pretty_print_object(obj: &HashMap<String, JsonValue>, depth: usize, indent: usize) -> String {
+        let padding = JsonValue::get_pretty_print_padding(depth, indent);
+        let inner_padding = JsonValue::get_pretty_print_padding(depth + 1, indent);
+        let mut result = String::new();
+        if obj.is_empty() {
+            result.push_str(&format!("{}{{}}", padding));
+            return result;
+        }
+        result.push_str(&format!("{}{{\n", padding));
+        for (index, (key, value)) in obj.iter().enumerate() {
+            result.push_str(&format!("{}\"{}\"", inner_padding, display_json_string(&key)));
+            result.push_str(": ");
+            result.push_str(&JsonValue::pretty_print(value, Some(depth + 1), Some(indent)));
+            if index < obj.len() - 1 {
+                result.push_str(",\n")
+            } else {
+                result.push('\n');
+            }
+        }
+        result.push('}');
+        result
+    }
+
+    fn pretty_print_array(arr: &Vec<JsonValue>, depth: usize, indent: usize) -> String {
+        let inner_padding = JsonValue::get_pretty_print_padding(depth + 1, indent);
+        let mut result = String::new();
+        if arr.is_empty() {
+            return "[]".to_string();
+        }
+        result.push_str("[\n");
+        for (index, item) in arr.iter().enumerate() {
+            let mut pretty_item = format!("{}{}", inner_padding, JsonValue::pretty_print(item, Some(depth + 1), Some(indent)));
+            if index < arr.len() - 1{
+                pretty_item.push_str(",\n");
+            } else {
+                pretty_item.push('\n');
+            }
+            result.push_str(&pretty_item);
+        }
+
+        if depth > 0 {
+            let padding = JsonValue::get_pretty_print_padding(depth, indent);
+            result.push_str(&format!("{}]", padding));
+        } else {
+            result.push_str("]");
+        }
+        result
+    }
+    
+    fn get_pretty_print_padding(depth: usize, indent: usize) -> String {
+        format!("{}", " ".repeat(depth * indent))
+    }
+
     pub fn as_str(&self) -> Option<&str> {
         match self {
             JsonValue::String(owned_string) => Some(owned_string.as_str()),
@@ -93,14 +159,14 @@ impl JsonValue {
 
     pub fn as_array(&self) -> Option<&Vec<JsonValue>> {
         match self {
-            JsonValue::Array(v) => Some(v),
+            JsonValue::Array(v) => Some(&v),
             _ => None,
         }
     }
 
     pub fn as_object(&self) -> Option<&HashMap<String, JsonValue>> {
         match self {
-            JsonValue::Object(v) => Some(v),
+            JsonValue::Object(v) => Some(&v),
             _ => None,
         }
     }
@@ -118,6 +184,26 @@ impl JsonValue {
 mod tests {
     use super::*;
     use crate::parser::JsonParser;
+    
+    #[test]
+    fn test_pretty_print_array() {
+        let mut parser = JsonParser::new(r#"["sleep", "eat", "run"]"#).unwrap();
+        let parsed = parser.parse().unwrap();
+        println!("{}", JsonValue::pretty_print(&parsed, None, None));
+        let expected = String::from("[\n  \"sleep\",\n  \"eat\",\n  \"run\"\n]");
+        println!("{}", expected);
+        assert_eq!(JsonValue::pretty_print(&parsed, None, None), expected);
+    }
+
+    #[test]
+    fn test_pretty_print_object() {
+        let mut parser = JsonParser::new(r#"{"name": "Alice", "age": 30, "likes_peaches": true, "pet": null, "favorite_things": ["climb", "eat"]}"#).unwrap();
+        let parsed = parser.parse().unwrap();
+        println!("{}", JsonValue::pretty_print(&parsed, None, None));
+        let expected = String::from("{\n  \"name\": \"Alice\",\n  \"age\": 30.0,\n  \"likes_peaches\": true,\n  \"pet\": null,\n  \"favorite_things\": [\n    \"climb\",\n    \"eat\"\n  ]\n}");
+        println!("{}", expected);
+        assert_eq!(JsonValue::pretty_print(&parsed, None, None), expected);
+    }
 
     #[test]
     fn test_display_primitives() {
