@@ -65,135 +65,79 @@ impl JsonParser {
     fn parse_array(&mut self) -> Result<JsonValue> {
         let mut array_contents: Vec<JsonValue> = Vec::new();
 
-        // this variable is used as a flag in order to know whether we expect
-        // the next token to be a Comma or not. In a JSON array, commas cannot
-        // appear as the first or last token of the array and they must occur between other
-        // tokens.
-        // This also means that the array can be ended whenever we are expecting a comma
-        let mut expecting_comma = false;
-
-        let mut parsing_array = true;
-        while let Some(next_token) = self.peek() {
-            match next_token {
-                Token::Comma if expecting_comma => {
-                    expecting_comma = false;
-                    self.advance();
-                }
-                Token::Comma if !expecting_comma => {
-                    return Err(JsonError::UnexpectedToken {
-                        expected: "value token".to_string(),
-                        found: "comma".to_string(),
-                        position: self.position,
-                    });
-                }
-                Token::RightBracket if array_contents.is_empty() || expecting_comma => {
-                    parsing_array = false;
-                    self.advance();
-                    break;
-                }
-                Token::RightBracket if !expecting_comma => {
-                    return Err(JsonError::UnexpectedToken {
-                        expected: "End of array".to_string(),
-                        found: "Dangling comma".to_string(),
-                        position: self.position - 1,
-                    });
-                }
-                something_else => match expecting_comma {
-                    true => {
-                        return Err(JsonError::UnexpectedToken {
-                            expected: "comma".to_string(),
-                            found: format!("{:?}", something_else),
-                            position: self.position,
-                        });
-                    }
-                    false => {
-                        array_contents.push(self.parse()?);
-                        expecting_comma = true;
-                    }
-                },
-            }
+        // handle empty array immediately
+        if let Some(Token::RightBracket) = self.peek() {
+            self.advance();
+            return Ok(JsonValue::Array(array_contents));
         }
-        match parsing_array {
-            true => Err(JsonError::UnexpectedEndOfInput {
-                expected: "End of array".to_string(),
-                position: self.position,
-            }),
-            false => Ok(JsonValue::Array(array_contents)),
+
+        loop {
+            array_contents.push(self.parse()?);
+            match self.advance() {
+                Some(Token::Comma) => continue,
+                Some(Token::RightBracket) => return Ok(JsonValue::Array(array_contents)),
+                Some(other) => return Err(
+                    JsonError::UnexpectedToken { 
+                        expected: "either a comma or a right bracket".to_string(), 
+                        found: format!("{:?}", other), 
+                        position: self.position
+                    }
+                ),
+                None => return Err(
+                    JsonError::UnexpectedEndOfInput { 
+                        expected: "either a comma or a right bracket".to_string(), 
+                        position: self.position 
+                    }
+                ),
+            }
         }
     }
 
     fn parse_object(&mut self) -> Result<JsonValue> {
-        let mut expecting_comma = false;
         let mut object_contents: HashMap<String, JsonValue> = HashMap::new();
-        let mut parsing_object = true;
-        while let Some(current) = self.advance() {
-            match current {
-                Token::Comma if expecting_comma => expecting_comma = false,
-                Token::Comma if !expecting_comma => {
-                    return Err(JsonError::UnexpectedToken {
-                        expected: "string or end of object".to_string(),
-                        found: "comma".to_string(),
-                        position: self.position,
-                    });
-                }
-                Token::RightBrace if object_contents.is_empty() || expecting_comma => {
-                    parsing_object = false;
-                    break;
-                }
-                Token::RightBrace if !expecting_comma => {
-                    return Err(JsonError::UnexpectedToken {
-                        expected: "string".to_string(),
-                        found: "end of object".to_string(),
-                        position: self.position,
-                    });
-                }
-                Token::String(v) if expecting_comma => {
-                    return Err(JsonError::UnexpectedToken {
-                        expected: "comma".to_string(),
-                        found: format!("{:?}", v),
-                        position: self.position,
-                    });
-                }
-                Token::String(v) if !expecting_comma => {
-                    let key = v.clone();
-                    match self.advance() {
-                        Some(maybe_colon) => match maybe_colon {
-                            Token::Colon => {
-                                let value = self.parse()?;
-                                object_contents.insert(key, value);
-                                expecting_comma = true;
-                            }
-                            _ => {
-                                return Err(JsonError::UnexpectedToken {
-                                    expected: "colon".to_string(),
-                                    found: format!("{:?}", maybe_colon),
-                                    position: self.position,
-                                });
-                            }
-                        },
-                        None => {
-                            return Err(JsonError::UnexpectedEndOfInput {
-                                expected: "colon".to_string(),
-                                position: self.position,
-                            });
-                        }
-                    }
-                }
-                _ => {
-                    return Err(JsonError::UnexpectedToken {
-                        expected: "either a comma, right brace or a string".to_string(),
-                        found: format!("{:?}", current),
-                        position: self.position,
-                    });
-                }
-            }
+
+        // handle empty object case immediately
+        if let Some(Token::RightBrace) = self.peek() {
+            return Ok(JsonValue::Object(object_contents));
         }
-        match parsing_object {
-            true => Err(JsonError::UnexpectedEndOfInput {
-                expected: "End of object".to_string(),
-                position: self.position,
-            }),
-            false => Ok(JsonValue::Object(object_contents)),
+        
+        // now we can be sure there is at least one property inside the JSON object
+        loop {
+            match self.advance() {
+                Some(Token::String(key)) => match self.advance() {
+                    Some(Token::Colon) => {
+                        object_contents.insert(key.clone(), self.parse()?);
+                    }
+                    Some(other) => return Err(
+                        JsonError::UnexpectedToken { 
+                            expected: "colon".to_string(), 
+                            found: format!("{:?}", other), 
+                            position: self.position 
+                        }
+                    ),
+                    None => return Err(
+                        JsonError::UnexpectedEndOfInput { 
+                            expected: "colon".to_string(), 
+                            position: self.position 
+                        }
+                    )
+                }
+                Some(Token::Comma) => continue,
+                Some(Token::RightBrace) => return Ok(JsonValue::Object(object_contents)),
+                Some(other) => return Err(
+                    JsonError::UnexpectedToken { 
+                        expected: "string".to_string(), 
+                        found: format!("{:?}", other), 
+                        position: self.position 
+                    }
+                ),
+                None => return Err(
+                    JsonError::UnexpectedEndOfInput { 
+                        expected: "string".to_string(), 
+                        position: self.position 
+                    }
+                ),
+            }
         }
     }
 
