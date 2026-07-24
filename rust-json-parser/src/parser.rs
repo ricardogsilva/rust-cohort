@@ -76,19 +76,19 @@ impl JsonParser {
             match self.advance() {
                 Some(Token::Comma) => continue,
                 Some(Token::RightBracket) => return Ok(JsonValue::Array(array_contents)),
-                Some(other) => return Err(
-                    JsonError::UnexpectedToken { 
-                        expected: "either a comma or a right bracket".to_string(), 
-                        found: format!("{:?}", other), 
-                        position: self.position
-                    }
-                ),
-                None => return Err(
-                    JsonError::UnexpectedEndOfInput { 
-                        expected: "either a comma or a right bracket".to_string(), 
-                        position: self.position 
-                    }
-                ),
+                Some(other) => {
+                    return Err(JsonError::UnexpectedToken {
+                        expected: "either a comma or a right bracket".to_string(),
+                        found: format!("{:?}", other),
+                        position: self.position,
+                    });
+                }
+                None => {
+                    return Err(JsonError::UnexpectedEndOfInput {
+                        expected: "either a comma or a right bracket".to_string(),
+                        position: self.position,
+                    });
+                }
             }
         }
     }
@@ -98,47 +98,63 @@ impl JsonParser {
 
         // handle empty object case immediately
         if let Some(Token::RightBrace) = self.peek() {
+            self.advance();
             return Ok(JsonValue::Object(object_contents));
         }
-        
-        // now we can be sure there is at least one property inside the JSON object
-        loop {
-            match self.advance() {
-                Some(Token::String(key)) => match self.advance() {
+
+        // now we are sure we can expect at least one key-value pair inside the JSON object
+        while let Some(v) = self.advance() {
+            match v {
+                Token::String(key) => match self.advance() {
                     Some(Token::Colon) => {
                         object_contents.insert(key.clone(), self.parse()?);
+                        let next_token = self.peek();
+                        // `matches!()` macro is easier to negate when we only care about something being false
+                        if !matches!(next_token, Some(Token::Comma) | Some(Token::RightBrace)) {
+                            return Err(JsonError::UnexpectedToken {
+                                expected: "comma or end of object".to_string(),
+                                found: format!("{:?}", next_token),
+                                position: self.position + 1,
+                            });
+                        }
                     }
-                    Some(other) => return Err(
-                        JsonError::UnexpectedToken { 
-                            expected: "colon".to_string(), 
-                            found: format!("{:?}", other), 
-                            position: self.position 
-                        }
-                    ),
-                    None => return Err(
-                        JsonError::UnexpectedEndOfInput { 
-                            expected: "colon".to_string(), 
-                            position: self.position 
-                        }
-                    )
+                    Some(other) => {
+                        return Err(JsonError::UnexpectedToken {
+                            expected: "colon".to_string(),
+                            found: format!("{:?}", other),
+                            position: self.position,
+                        });
+                    }
+                    None => {
+                        return Err(JsonError::UnexpectedEndOfInput {
+                            expected: "colon".to_string(),
+                            position: self.position,
+                        });
+                    }
+                },
+                Token::Comma => {
+                    let next_token = self.peek();
+                    // this is an alternative to negating on `matches!()`
+                    let Some(Token::String(..)) = next_token else {
+                        return Err(JsonError::UnexpectedToken {
+                            expected: "string".to_string(),
+                            found: format!("{:?}", next_token),
+                            position: self.position + 1,
+                        });
+                    };
+                    continue;
                 }
-                Some(Token::Comma) => continue,
-                Some(Token::RightBrace) => return Ok(JsonValue::Object(object_contents)),
-                Some(other) => return Err(
-                    JsonError::UnexpectedToken { 
-                        expected: "string".to_string(), 
-                        found: format!("{:?}", other), 
-                        position: self.position 
-                    }
-                ),
-                None => return Err(
-                    JsonError::UnexpectedEndOfInput { 
-                        expected: "string".to_string(), 
-                        position: self.position 
-                    }
-                ),
+                Token::RightBrace => break,
+                _ => {
+                    return Err(JsonError::UnexpectedToken {
+                        expected: "string".to_string(),
+                        found: format!("{:?}", v),
+                        position: self.position,
+                    });
+                }
             }
         }
+        Ok(JsonValue::Object(object_contents))
     }
 
     fn advance(&mut self) -> Option<Token> {
@@ -153,14 +169,7 @@ impl JsonParser {
     }
 
     fn peek(&self) -> Option<&Token> {
-        // return current and stay put
-        match self.is_at_end() {
-            true => None,
-            false => match self.position {
-                n if n <= self.tokens.len() => Some(&self.tokens[self.position]),
-                _ => None,
-            },
-        }
+        self.tokens.get(self.position)
     }
 
     fn is_at_end(&self) -> bool {
