@@ -45,7 +45,7 @@ impl From<JsonError> for PyErr {
                 format!("Invalid number found at position {position}: {value}")
             ),
             JsonError::InvalidUnicode { sequence, position } => PyValueError::new_err(
-                format!("Invalid unicode at position {position}: sequence {sequence")
+                format!("Invalid unicode at position {position}: sequence {sequence}")
             ),
             JsonError::UnexpectedEndOfInput { expected, position } => PyValueError::new_err(
                 format!("Unexpected end of input at position {position}: expected {expected}")
@@ -59,7 +59,7 @@ impl From<JsonError> for PyErr {
 
 // Python callable functions
 #[pyfunction]
-fn parse_json(py: Python<'_>, input: &str) -> PyResult<Bound<'_, PyAny>> {
+fn parse_json<'py>(py: Python<'py>, input: &str) -> PyResult<Bound<'py, PyAny>> {
     let mut parser = JsonParser::new(input)?;
     let result = parser.parse()?;
     Ok(result.into_pyobject(py)?)
@@ -83,10 +83,10 @@ fn parse_json(py: Python<'_>, input: &str) -> PyResult<Bound<'_, PyAny>> {
 
 // module registration - This is essential for Python to be able to use the 
 // functions annotated with #[pyfunction]
-// #[pymodule]
-// fn _rust_json_parser(m: &Bound<PyModule>) -> PyResult<()> {
-//     m.add_function(wrap_pyfunction!(parse_json, m)?)?;
-//     m.add_function(wrap_pyfunction!(parse_json_file, m)?)?;
-//     m.add_function(wrap_pyfunction!(dumps, m)?)?;
-//     Ok(())
-// }
+#[pymodule]
+fn _rust_json_parser(m: &Bound<PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(parse_json, m)?)?;
+    // m.add_function(wrap_pyfunction!(parse_json_file, m)?)?;
+    // m.add_function(wrap_pyfunction!(dumps, m)?)?;
+    Ok(())
+}
