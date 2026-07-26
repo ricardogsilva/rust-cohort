@@ -1,6 +1,6 @@
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
-use pyo3::exceptions::PyValueError;
 
 use crate::{JsonError, JsonParser, JsonValue};
 
@@ -38,21 +38,25 @@ impl<'py> IntoPyObject<'py> for JsonValue {
 impl From<JsonError> for PyErr {
     fn from(err: JsonError) -> PyErr {
         match err {
-            JsonError::InvalidEscape { char, position } => PyValueError::new_err(
-                format!("Invalid escape at position {position}: char {char}")
-            ),
-            JsonError::InvalidNumber { value, position } => PyValueError::new_err(
-                format!("Invalid number found at position {position}: {value}")
-            ),
-            JsonError::InvalidUnicode { sequence, position } => PyValueError::new_err(
-                format!("Invalid unicode at position {position}: sequence {sequence}")
-            ),
+            JsonError::InvalidEscape { char, position } => PyValueError::new_err(format!(
+                "Invalid escape at position {position}: char {char}"
+            )),
+            JsonError::InvalidNumber { value, position } => PyValueError::new_err(format!(
+                "Invalid number found at position {position}: {value}"
+            )),
+            JsonError::InvalidUnicode { sequence, position } => PyValueError::new_err(format!(
+                "Invalid unicode at position {position}: sequence {sequence}"
+            )),
             JsonError::UnexpectedEndOfInput { expected, position } => PyValueError::new_err(
-                format!("Unexpected end of input at position {position}: expected {expected}")
+                format!("Unexpected end of input at position {position}: expected {expected}"),
             ),
-            JsonError::UnexpectedToken { expected, found, position } => PyValueError::new_err(
-                format!("Unexpected token at position {position}: expected {expected}, found {found}")
-            ),
+            JsonError::UnexpectedToken {
+                expected,
+                found,
+                position,
+            } => PyValueError::new_err(format!(
+                "Unexpected token at position {position}: expected {expected}, found {found}"
+            )),
         }
     }
 }
@@ -62,14 +66,14 @@ impl From<JsonError> for PyErr {
 fn parse_json<'py>(py: Python<'py>, input: &str) -> PyResult<Bound<'py, PyAny>> {
     let mut parser = JsonParser::new(input)?;
     let result = parser.parse()?;
-    Ok(result.into_pyobject(py)?)
+    result.into_pyobject(py)
 }
 
 // #[pyfunction]
 // fn parse_json_file(py: Python<'_>, path: &str) -> PyResult<Bound<'_, PyAny>> {
 //     todo!();
 // }
-// 
+//
 // #[pyfunction]
 // #[pyo3(signature = (obj, indent=None))]
 // fn dumps(obj: &Bound<PyAny>, indent: Option<usize>) -> PyResult<String> {
@@ -81,7 +85,7 @@ fn parse_json<'py>(py: Python<'py>, input: &str) -> PyResult<Bound<'py, PyAny>> 
 //     todo!();
 // }
 
-// module registration - This is essential for Python to be able to use the 
+// module registration - This is essential for Python to be able to use the
 // functions annotated with #[pyfunction]
 #[pymodule]
 fn _rust_json_parser(m: &Bound<PyModule>) -> PyResult<()> {
