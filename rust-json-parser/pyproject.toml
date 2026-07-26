@@ -1,0 +1,38 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+python-source = "python"
+module-name = "rust_json_parser._rust_json_parser"
+features = ["pyo3/extension-module"]
+python-packages = ["rust_json_parser"]
+editable-profile = "dev"
+
+[project]
+name = "rust-json-parser"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Ricardo Garcia Silva", email = "ricardo.garcia.silva@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = []
+
+[project.scripts]
+rust-json-parser = "rust_json_parser:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.uv]
+cache-keys = [
+    { file = "pyproject.toml" }, 
+    { file = "src/**/*.rs" }, 
+    { file = "Cargo.toml" }, 
+    { file = "Cargo.lock" }
+]
+config-settings = { build-args  = '--profile=dev' }

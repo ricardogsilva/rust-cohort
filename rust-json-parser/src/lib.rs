@@ -13,6 +13,9 @@ pub use value::JsonValue;
 // convenience type alias - this lets us refer to Result<JsonValue> instead of Result<JsonValue, JsonError>
 pub type Result<T> = std::result::Result<T, JsonError>;
 
+#[cfg(feature = "python")]
+mod python_bindings;
+
 #[cfg(test)]
 mod tests {
     use super::*;
