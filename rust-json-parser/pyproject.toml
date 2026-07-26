@@ -26,6 +26,7 @@ rust-json-parser = "rust_json_parser:main"
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "ruff>=0.16.0",
 ]
 
 [tool.uv]
