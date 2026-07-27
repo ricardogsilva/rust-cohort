@@ -5,4 +5,11 @@ type JsonValue = (
     dict[str, JsonValue] | list[JsonValue] | str | int | float | bool | None
 )
 
+
+def dumps(input: JsonValue, indent: int | None = None) -> str: ...
+
+
 def parse_json(input: str) -> JsonValue: ...
+
+
+def parse_json_file(input_path: str) -> JsonValue: ...

@@ -1,5 +1,5 @@
 import pytest
-from rust_json_parser import parse_json
+from rust_json_parser import dumps, parse_json, parse_json_file
 
 
 def test_null_becomes_none():
@@ -53,3 +53,19 @@ def test_parse_all_json_types():
     assert result["null"] is None
     assert result["arr"] == [1.0, 2.0]
     assert result["obj"] == {}
+
+
+def test_file_not_found_raises_io_error():
+    with pytest.raises(IOError):
+        parse_json_file('/nonexistent/file.json')
+
+
+def test_dumps_basic():
+    result = dumps({"key": "value"})
+    assert '"key"' in result
+    assert '"value"' in result
+
+
+def test_dumps_with_indent():
+    result = dumps({"key": "value"}, indent=2)
+    assert '\n' in result

@@ -116,6 +116,83 @@ impl JsonValue {
     pub fn get_index(&self, index: usize) -> Option<&JsonValue> {
         self.as_array()?.get(index)
     }
+
+    pub fn pretty_print(val: &JsonValue, indent: Option<usize>) -> String {
+        if let Some(i) = indent {
+            return Self::pretty_printer(val, 0, i);
+        }
+        format!("{val}")
+    }
+
+    fn pretty_printer(val: &JsonValue, depth: usize, indent: usize) -> String {
+        let padding = Self::get_pretty_print_padding(depth, indent);
+        match val {
+            JsonValue::Null => format!("{padding}null"),
+            JsonValue::Boolean(b) => format!("{padding}{}", b),
+            JsonValue::Number(n) => format!("{padding}{}", n),
+            JsonValue::String(s) => format!("{padding}\"{}\"", display_json_string(s)),
+            JsonValue::Array(a) => Self::pretty_print_array(a, depth, indent),
+            JsonValue::Object(obj) => Self::pretty_print_object(obj, depth, indent),
+        }
+    }
+
+    fn pretty_print_array(arr: &[JsonValue], depth: usize, indent: usize) -> String {
+        let outer_padding = Self::get_pretty_print_padding(depth, indent);
+        if arr.is_empty() {
+            return format!("{outer_padding}[]");
+        }
+
+        let inner_padding = Self::get_pretty_print_padding(depth + 1, indent);
+        let mut result = format!("{outer_padding}[\n");
+        for (index, item) in arr.iter().enumerate() {
+            let mut pretty_item = format!(
+                "{}{}",
+                inner_padding,
+                Self::pretty_printer(item, depth, indent)
+            );
+            if index < arr.len() - 1 {
+                pretty_item.push_str(",\n");
+            } else {
+                pretty_item.push('\n');
+            }
+            result.push_str(&pretty_item);
+        }
+        result.push_str(&format!("{outer_padding}]"));
+        result
+    }
+
+    fn pretty_print_object(
+        obj: &HashMap<String, JsonValue>,
+        depth: usize,
+        indent: usize,
+    ) -> String {
+        let outer_padding = Self::get_pretty_print_padding(depth, indent);
+        if obj.is_empty() {
+            return format!("{outer_padding}{{}}");
+        }
+        let inner_padding = Self::get_pretty_print_padding(depth + 1, indent);
+        let mut result = format!("{outer_padding}{{\n");
+        for (index, (k, v)) in obj.iter().enumerate() {
+            let mut pretty_kv = format!(
+                "{inner_padding}\"{}\": {}",
+                display_json_string(k),
+                Self::pretty_printer(v, depth + 1, indent)
+            );
+            if index < obj.len() + 1 {
+                pretty_kv.push_str(",\n");
+            } else {
+                pretty_kv.push('\n')
+            }
+            result.push_str(&pretty_kv);
+        }
+        result.push_str(&format!("{outer_padding}}}"));
+        result
+    }
+
+    fn get_pretty_print_padding(depth: usize, indent: usize) -> String {
+        // Can this overflow? What happens then?
+        " ".repeat(depth * indent).to_string()
+    }
 }
 
 #[cfg(test)]
