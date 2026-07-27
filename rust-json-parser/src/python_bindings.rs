@@ -66,6 +66,8 @@ impl From<JsonError> for PyErr {
 fn parse_json<'py>(py: Python<'py>, input: &str) -> PyResult<Bound<'py, PyAny>> {
     let mut parser = JsonParser::new(input)?;
     let result = parser.parse()?;
+    // this `py` variable holds a token which proves we have the Python GIL
+    // and are therefore safe to manipulate Python objects
     result.into_pyobject(py)
 }
 
