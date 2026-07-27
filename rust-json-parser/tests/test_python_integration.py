@@ -57,7 +57,7 @@ def test_parse_all_json_types():
 
 def test_file_not_found_raises_io_error():
     with pytest.raises(IOError):
-        parse_json_file('/nonexistent/file.json')
+        parse_json_file("/nonexistent/file.json")
 
 
 def test_dumps_basic():
@@ -68,4 +68,4 @@ def test_dumps_basic():
 
 def test_dumps_with_indent():
     result = dumps({"key": "value"}, indent=2)
-    assert '\n' in result
+    assert "\n" in result
