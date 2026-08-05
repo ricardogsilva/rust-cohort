@@ -29,6 +29,7 @@ rust-json-parser = "rust_json_parser.cliapp:app"
 dev = [
     "pytest>=9.1.1",
     "ruff>=0.16.0",
+    "simplejson>=4.1.1",
 ]
 
 [tool.uv]
