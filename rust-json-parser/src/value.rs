@@ -151,7 +151,7 @@ impl JsonValue {
             let mut pretty_item = format!(
                 "{}{}",
                 inner_padding,
-                Self::pretty_printer(item, depth, indent)
+                Self::pretty_printer(item, depth + 1, indent)
             );
             if index < arr.len() - 1 {
                 pretty_item.push_str(",\n");
@@ -171,17 +171,17 @@ impl JsonValue {
         indent: usize,
     ) -> String {
         if obj.is_empty() {
-            return String::from("{{}}");
+            return String::from("{}");
         }
         let inner_padding = Self::get_pretty_print_padding(depth + 1, indent);
-        let mut result = "{{\n".to_string();
+        let mut result = "{\n".to_string();
         for (index, (k, v)) in obj.iter().enumerate() {
             let mut pretty_kv = format!(
                 "{inner_padding}\"{}\": {}",
                 display_json_string(k),
                 Self::pretty_printer(v, depth + 1, indent)
             );
-            if index < obj.len() + 1 {
+            if index < obj.len() - 1 {
                 pretty_kv.push_str(",\n");
             } else {
                 pretty_kv.push('\n')

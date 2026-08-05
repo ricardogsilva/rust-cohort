@@ -87,7 +87,7 @@ fn dumps(obj: &Bound<PyAny>, indent: Option<usize>) -> PyResult<String> {
     let converted = py_to_json_value(obj)?;
     match indent {
         Some(_) => Ok(JsonValue::pretty_print(&converted, indent)),
-        None => Ok(format!("{}", converted)),
+        None => Ok(converted.to_string()),
     }
 }
 

@@ -23,7 +23,7 @@ dependencies = [
 ]
 
 [project.scripts]
-rust-json-parser = "rust_json_parser:main"
+rust-json-parser = "rust_json_parser.cliapp:app"
 
 [dependency-groups]
 dev = [
