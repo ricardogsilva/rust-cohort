@@ -11,6 +11,24 @@ use crate::value::JsonValue;
 // it
 type Result<T> = std::result::Result<T, JsonError>;
 
+/// A parser that turns a JSON-formatted string into a [`JsonValue`].
+///
+/// A `JsonParser` is built once from an input string (which tokenizes it
+/// up front) and then driven with [`JsonParser::parse`] to produce the
+/// resulting value.
+///
+/// # Example
+///
+/// ```
+/// use rust_json_parser::{JsonParser, JsonValue, JsonError};
+///
+/// # fn main() -> Result<(), JsonError> {
+/// let mut parser = JsonParser::new(r#"{"name": "Alice", "age": 30}"#)?;
+/// let value = parser.parse()?;
+/// assert_eq!(value.get("name"), Some(&JsonValue::String("Alice".to_string())));
+/// #   Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct JsonParser {
     tokens: Vec<Token>,
@@ -18,6 +36,26 @@ pub struct JsonParser {
 }
 
 impl JsonParser {
+    /// Creates a new `JsonParser` from a string of JSON input.
+    ///
+    /// This tokenizes `input` immediately, so any lexical errors (e.g. an
+    /// invalid escape sequence, or input that is empty/only whitespace)
+    /// are reported here rather than when [`parse`](JsonParser::parse) is
+    /// called.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`JsonError`] if `input` cannot be tokenized, or if it
+    /// contains no tokens at all (e.g. `""` or `"   "`).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rust_json_parser::JsonParser;
+    ///
+    /// let parser = JsonParser::new("[1, 2, 3]");
+    /// assert!(parser.is_ok());
+    /// ```
     pub fn new(input: &str) -> Result<Self> {
         let mut tokenizer = Tokenizer::new(input);
         match tokenizer.tokenize() {
@@ -35,6 +73,38 @@ impl JsonParser {
         }
     }
 
+    /// Parses the tokenized input and returns the resulting [`JsonValue`].
+    ///
+    /// This consumes tokens starting from the parser's current position,
+    /// recursing into nested arrays and objects as needed. Calling it
+    /// again on the same parser would continue from wherever it left off,
+    /// so in practice a `JsonParser` is normally parsed exactly once.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`JsonError`] if the tokens don't form valid JSON, e.g. a
+    /// missing comma or colon, an unclosed array/object, or the input
+    /// ending before a value is complete.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rust_json_parser::{JsonParser, JsonValue, JsonError};
+    ///
+    /// # fn main() -> Result<(), JsonError> {
+    /// let mut parser = JsonParser::new("[1, 2, 3]")?;
+    /// let value = parser.parse()?;
+    /// assert_eq!(
+    ///     value,
+    ///     JsonValue::Array(vec![
+    ///         JsonValue::Number(1.0),
+    ///         JsonValue::Number(2.0),
+    ///         JsonValue::Number(3.0),
+    ///     ])
+    /// );
+    /// #   Ok(())
+    /// # }
+    /// ```
     pub fn parse(&mut self) -> Result<JsonValue> {
         match self.is_at_end() {
             true => Err(JsonError::UnexpectedEndOfInput {

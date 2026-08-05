@@ -1,24 +1,35 @@
 use std::fmt;
 
+/// Used for providing informative errors on both the tokenizing and parsing of input JSON
 #[derive(Debug, Clone, PartialEq)]
 pub enum JsonError {
+    /// A token was found where a different one was expected — e.g. a stray
+    /// symbol, a misplaced comma, or a value where a key was required.
     UnexpectedToken {
         expected: String,
         found: String,
         position: usize,
     },
+    /// The input ended while a token, value, or closing bracket/quote was
+    /// still expected — e.g. a truncated string, object, or array.
     UnexpectedEndOfInput {
         expected: String,
         position: usize,
     },
+    /// A numeric literal was malformed, such as extra decimal points or
+    /// stray characters, and could not be parsed into an `f64`.
     InvalidNumber {
         value: String,
         position: usize,
     },
+    /// A `\<char>` escape sequence inside a string used a character that
+    /// isn't a recognized JSON escape (e.g. `\q`).
     InvalidEscape {
         char: char,
         position: usize,
     },
+    /// A `\u` escape inside a string wasn't followed by four valid hex
+    /// digits, or formed an invalid/incomplete surrogate pair.
     InvalidUnicode {
         sequence: String,
         position: usize,

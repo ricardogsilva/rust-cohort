@@ -1,3 +1,25 @@
+//! This is a complete JSON parser. It was built as a learning experience in order to get an introduction to rust.
+//! Main workflow that this supports is creating a new parser and using it to parse some input JSON.
+//! 
+//! # Example
+//! 
+//! ```
+//! # use rust_json_parser::{JsonParser, JsonValue, JsonError};
+//! # fn main() -> Result<(), JsonError> {
+//! let mut parser = JsonParser::new(r#"{"message": "Ahoy"}"#)?;
+//! let parsed = parser.parse()?;
+//! println!("{:?}", parsed);
+//! #   Ok(())
+//! # }
+//! ```
+//! 
+//! # Details
+//! Under the hood this works by taking the input JSON string and tokenizing it in accordance with the 
+//! [JSON grammar](https://www.rfc-editor.org/info/rfc8259/#section-2). The parsed tokens are then fed
+//! to a logic-processing function which turns them into valid JSON values. 
+//! 
+//!
+
 // declare modules - without the `pub` modifier, these are private
 mod error;
 mod parser;
