@@ -41,7 +41,7 @@ def benchmark(*sample_json: Path, num_iterations: int = 20_000) -> None:
             performance_benchmarks.perform_benchmark(
                 json_str=entry.read_text(),
                 name=entry.stem,
-                num_iterations=num_iterations
+                num_iterations=num_iterations,
             )
         )
     app.console.print(result)

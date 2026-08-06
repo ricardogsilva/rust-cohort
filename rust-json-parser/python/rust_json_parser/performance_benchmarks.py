@@ -47,8 +47,12 @@ class BenchmarkCollection:
         return result
 
 
-def perform_benchmark(json_str: str, name: str = "benchmark", num_iterations: int = 10_000) -> BenchmarkResult:
-    rust_secs, stdlib_secs, simplejson_secs = benchmark_performance(json_str=json_str, iterations=num_iterations)
+def perform_benchmark(
+    json_str: str, name: str = "benchmark", num_iterations: int = 10_000
+) -> BenchmarkResult:
+    rust_secs, stdlib_secs, simplejson_secs = benchmark_performance(
+        json_str=json_str, iterations=num_iterations
+    )
     return BenchmarkResult(
         name=name,
         json_size_kb=len(json_str.encode("utf-8")) / 1024,

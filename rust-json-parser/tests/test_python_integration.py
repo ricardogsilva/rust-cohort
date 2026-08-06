@@ -1,5 +1,10 @@
 import pytest
-from rust_json_parser import dumps, parse_json, parse_json_file
+from rust_json_parser import (
+    benchmark_performance,
+    dumps,
+    parse_json,
+    parse_json_file,
+)
 
 
 def test_null_becomes_none():
@@ -69,3 +74,14 @@ def test_dumps_basic():
 def test_dumps_with_indent():
     result = dumps({"key": "value"}, indent=2)
     assert "\n" in result
+
+
+def test_benchmark_returns_tuple():
+    """Verify benchmark_performance returns timing tuple with all three values."""
+    rust_time, python_json_time, simplejson_time = benchmark_performance('{"test": 1}')
+    assert isinstance(rust_time, float)
+    assert isinstance(python_json_time, float)
+    assert isinstance(simplejson_time, float)
+    assert rust_time > 0
+    assert python_json_time > 0
+    assert simplejson_time > 0

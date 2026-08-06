@@ -138,7 +138,7 @@ impl Tokenizer {
 
     fn tokenize_string(&mut self) -> Result<Token, JsonError> {
         self.advance(); // consume opening quote - throw it away
-        // this capacity is really just a guess - seems likely that a most strings in 
+        // this capacity is really just a guess - seems likely that a most strings in
         // a JSON document would be small
         let mut string_value = String::with_capacity(32);
         let mut string_terminated = false;
