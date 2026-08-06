@@ -20,7 +20,8 @@ pub enum JsonValue {
 }
 
 fn display_json_string(original: &str) -> String {
-    let mut result = String::new();
+    // preallocate a string that is the same size as the input, with some extra padding for escaping chars
+    let mut result = String::with_capacity(original.len() + 32);
     for ch in original.chars() {
         match ch {
             '"' => result.push_str("\\\""),
