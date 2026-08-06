@@ -20,6 +20,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "cyclopts>=4.22.2",
+    "simplejson>=4.1.1",
 ]
 
 [project.scripts]
@@ -29,7 +30,6 @@ rust-json-parser = "rust_json_parser.cliapp:app"
 dev = [
     "pytest>=9.1.1",
     "ruff>=0.16.0",
-    "simplejson>=4.1.1",
 ]
 
 [tool.uv]
@@ -39,7 +39,7 @@ cache-keys = [
     { file = "Cargo.toml" }, 
     { file = "Cargo.lock" }
 ]
-config-settings = { build-args  = '--profile=dev' }
+# config-settings = { build-args  = '--profile=dev' }
 
 [tool.pytest.ini_options]
 addopts = "--verbose"

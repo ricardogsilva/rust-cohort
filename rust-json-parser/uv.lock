@@ -174,23 +174,25 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "cyclopts" },
+    { name = "simplejson" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "pytest" },
     { name = "ruff" },
-    { name = "simplejson" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "cyclopts", specifier = ">=4.22.2" }]
+requires-dist = [
+    { name = "cyclopts", specifier = ">=4.22.2" },
+    { name = "simplejson", specifier = ">=4.1.1" },
+]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "ruff", specifier = ">=0.16.0" },
-    { name = "simplejson", specifier = ">=4.1.1" },
 ]
 
 [[package]]
