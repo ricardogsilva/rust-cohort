@@ -84,7 +84,7 @@ impl JsonValue {
     ///
     /// ```
     /// use rust_json_parser::JsonValue;
-    /// 
+    ///
     /// assert!(JsonValue::Null.is_null());
     /// assert!(!JsonValue::Boolean(false).is_null());
     /// ```
@@ -98,7 +98,7 @@ impl JsonValue {
     ///
     /// ```
     /// use rust_json_parser::JsonValue;
-    /// 
+    ///
     /// let value = JsonValue::String("hello".to_string());
     /// assert_eq!(value.as_str(), Some("hello"));
     /// assert_eq!(JsonValue::Null.as_str(), None);
@@ -116,7 +116,7 @@ impl JsonValue {
     ///
     /// ```
     /// use rust_json_parser::JsonValue;
-    /// 
+    ///
     /// let value = JsonValue::Number(42.5);
     /// assert_eq!(value.as_f64(), Some(42.5));
     /// assert_eq!(JsonValue::Null.as_f64(), None);
@@ -134,7 +134,7 @@ impl JsonValue {
     ///
     /// ```
     /// use rust_json_parser::JsonValue;
-    /// 
+    ///
     /// let value = JsonValue::Boolean(true);
     /// assert_eq!(value.as_bool(), Some(true));
     /// assert_eq!(JsonValue::Null.as_bool(), None);
@@ -152,7 +152,7 @@ impl JsonValue {
     ///
     /// ```
     /// use rust_json_parser::JsonValue;
-    /// 
+    ///
     /// let value = JsonValue::Array(vec![JsonValue::Number(1.0)]);
     /// assert_eq!(value.as_array().unwrap().len(), 1);
     /// assert_eq!(JsonValue::Null.as_array(), None);
@@ -171,7 +171,7 @@ impl JsonValue {
     /// ```
     /// use rust_json_parser::JsonValue;
     /// use std::collections::HashMap;
-    /// 
+    ///
     /// let mut map = HashMap::new();
     /// map.insert("key".to_string(), JsonValue::Boolean(true));
     /// let value = JsonValue::Object(map);

@@ -12,28 +12,16 @@ pub enum JsonError {
     },
     /// The input ended while a token, value, or closing bracket/quote was
     /// still expected — e.g. a truncated string, object, or array.
-    UnexpectedEndOfInput {
-        expected: String,
-        position: usize,
-    },
+    UnexpectedEndOfInput { expected: String, position: usize },
     /// A numeric literal was malformed, such as extra decimal points or
     /// stray characters, and could not be parsed into an `f64`.
-    InvalidNumber {
-        value: String,
-        position: usize,
-    },
+    InvalidNumber { value: String, position: usize },
     /// A `\<char>` escape sequence inside a string used a character that
     /// isn't a recognized JSON escape (e.g. `\q`).
-    InvalidEscape {
-        char: char,
-        position: usize,
-    },
+    InvalidEscape { char: char, position: usize },
     /// A `\u` escape inside a string wasn't followed by four valid hex
     /// digits, or formed an invalid/incomplete surrogate pair.
-    InvalidUnicode {
-        sequence: String,
-        position: usize,
-    },
+    InvalidUnicode { sequence: String, position: usize },
 }
 
 // Display trait for JsonError
