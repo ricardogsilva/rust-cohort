@@ -116,6 +116,87 @@ impl JsonValue {
     pub fn get_index(&self, index: usize) -> Option<&JsonValue> {
         self.as_array()?.get(index)
     }
+
+    pub fn pretty_print(val: &JsonValue, indent: Option<usize>) -> String {
+        match indent {
+            // Self::pretty_printer() is how we can call associated functions - rust makes
+            // struct methods (i.e. those functions that take self as an argument) available
+            // in the impl scope by default but it does not do this for those functions which
+            // are just associated (AKA static functions) - these need to be referred to as eiter
+            // Self::function_name() or JsonValue::function_name()
+            Some(i) => Self::pretty_printer(val, 0, i),
+            None => format!("{val}"),
+        }
+    }
+
+    fn pretty_printer(val: &JsonValue, depth: usize, indent: usize) -> String {
+        match val {
+            JsonValue::Null => "null".to_string(),
+            JsonValue::Boolean(b) => format!("{}", b),
+            JsonValue::Number(n) => format!("{}", n),
+            JsonValue::String(s) => format!("\"{}\"", display_json_string(s)),
+            JsonValue::Array(a) => Self::pretty_print_array(a, depth, indent),
+            JsonValue::Object(obj) => Self::pretty_print_object(obj, depth, indent),
+        }
+    }
+
+    fn pretty_print_array(arr: &[JsonValue], depth: usize, indent: usize) -> String {
+        if arr.is_empty() {
+            return String::from("[]");
+        }
+
+        let inner_padding = Self::get_pretty_print_padding(depth + 1, indent);
+        let mut result = "[\n".to_string();
+        for (index, item) in arr.iter().enumerate() {
+            let mut pretty_item = format!(
+                "{}{}",
+                inner_padding,
+                Self::pretty_printer(item, depth + 1, indent)
+            );
+            if index < arr.len() - 1 {
+                pretty_item.push_str(",\n");
+            } else {
+                pretty_item.push('\n');
+            }
+            result.push_str(&pretty_item);
+        }
+        let outer_padding = Self::get_pretty_print_padding(depth, indent);
+        result.push_str(&format!("{outer_padding}]"));
+        result
+    }
+
+    fn pretty_print_object(
+        obj: &HashMap<String, JsonValue>,
+        depth: usize,
+        indent: usize,
+    ) -> String {
+        if obj.is_empty() {
+            return String::from("{}");
+        }
+        let inner_padding = Self::get_pretty_print_padding(depth + 1, indent);
+        let mut result = "{\n".to_string();
+        for (index, (k, v)) in obj.iter().enumerate() {
+            let mut pretty_kv = format!(
+                "{inner_padding}\"{}\": {}",
+                display_json_string(k),
+                Self::pretty_printer(v, depth + 1, indent)
+            );
+            if index < obj.len() - 1 {
+                pretty_kv.push_str(",\n");
+            } else {
+                pretty_kv.push('\n')
+            }
+            result.push_str(&pretty_kv);
+        }
+        let outer_padding = Self::get_pretty_print_padding(depth, indent);
+        result.push_str(&format!("{outer_padding}}}"));
+        result
+    }
+
+    fn get_pretty_print_padding(depth: usize, indent: usize) -> String {
+        // Can this overflow? What happens then?
+        " ".repeat(depth * indent).to_string()
+    }
 }
 
 #[cfg(test)]
