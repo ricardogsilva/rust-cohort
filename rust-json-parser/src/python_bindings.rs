@@ -1,8 +1,10 @@
 use pyo3::exceptions::PyValueError;
+use pyo3::ffi::c_str;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use std::collections::HashMap;
 use std::fs::read_to_string;
+use std::time::Instant;
 
 use crate::{JsonError, JsonParser, JsonValue};
 
@@ -91,6 +93,71 @@ fn dumps(obj: &Bound<PyAny>, indent: Option<usize>) -> PyResult<String> {
     }
 }
 
+#[pyfunction]
+#[pyo3(signature = (json_str, iterations = 10_000 ))]
+fn benchmark_performance(
+    py: Python<'_>,
+    json_str: &str,
+    iterations: u32,
+) -> PyResult<(f64, f64, f64)> {
+    // warming up caches ahead of starting to measure time
+    for _ in 0..1_000 {
+        let mut parser = JsonParser::new(json_str)?;
+        let _ = parser.parse();
+    }
+    // measure our rust parser
+    let start = Instant::now();
+    for _ in 0..iterations {
+        let mut parser = JsonParser::new(json_str)?;
+        let _ = parser.parse()?;
+    }
+    let json_parser_secs = start.elapsed().as_secs_f64();
+
+    // python's sdlib json
+    let py_json = py.import("json")?;
+    let fun = py_json.getattr("loads")?;
+    // warm up
+    for _ in 0..1_000 {
+        let _ = fun.call1((json_str,))?;
+    }
+    let start = Instant::now();
+    for _ in 0..iterations {
+        let _ = fun.call1((json_str,))?;
+    }
+    let python_json_secs = start.elapsed().as_secs_f64();
+
+    // python's simplejson package
+    let py_simplejson = py.import("simplejson")?;
+
+    py.run(
+        c_str!(
+            r#"
+import simplejson, simplejson.decoder, simplejson.encoder, simplejson.scanner
+simplejson.decoder.scanstring = simplejson.decoder.py_scanstring
+simplejson.decoder.make_scanner = simplejson.scanner.py_make_scanner
+simplejson.encoder.c_make_encoder = None
+simplejson._default_decoder = simplejson.decoder.JSONDecoder()
+simplejson._default_encoder = simplejson.encoder.JSONEncoder()
+        "#
+        ),
+        None,
+        None,
+    )?;
+
+    let fun = py_simplejson.getattr("loads")?;
+    // warm up
+    for _ in 0..1_000 {
+        let _ = fun.call1((json_str,))?;
+    }
+    let start = Instant::now();
+    for _ in 0..iterations {
+        let _ = fun.call1((json_str,))?;
+    }
+    let simplejson_secs = start.elapsed().as_secs_f64();
+
+    Ok((json_parser_secs, python_json_secs, simplejson_secs))
+}
+
 // this is not exposed to python (note the lack of #[pyfunction] rust property)
 fn py_to_json_value(obj: &Bound<PyAny>) -> PyResult<JsonValue> {
     if obj.is_none() {
@@ -140,6 +207,7 @@ fn _rust_json_parser(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(parse_json, m)?)?;
     m.add_function(wrap_pyfunction!(parse_json_file, m)?)?;
     m.add_function(wrap_pyfunction!(dumps, m)?)?;
+    m.add_function(wrap_pyfunction!(benchmark_performance, m)?)?;
 
     // it would be nice to retrieve this dynamically from cargo.toml somehow
     // even better would be if cargo would retrieve it from git and never write

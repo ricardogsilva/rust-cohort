@@ -90,7 +90,8 @@ impl Tokenizer {
 
     fn tokenize_keyword(&mut self) -> Result<Token, JsonError> {
         // advances while trying to tokenize a JSON keyword
-        let mut keyword_as_string = String::new();
+        // preallocate a size big enough to hold 'false'
+        let mut keyword_as_string = String::with_capacity(5);
         while let Some(next_char) = self.peek() {
             match next_char {
                 _ if next_char.is_alphabetic() => {
@@ -114,7 +115,8 @@ impl Tokenizer {
 
     fn tokenize_number(&mut self) -> Result<Token, JsonError> {
         // Advances while trying to tokenize a JSON number
-        let mut number_as_string = String::new();
+        // preallocate a size that could fit foreseeable large numbers
+        let mut number_as_string = String::with_capacity(24);
         while let Some(next_char) = self.peek() {
             match next_char {
                 '0'..='9' | '-' | '.' => {
@@ -136,7 +138,9 @@ impl Tokenizer {
 
     fn tokenize_string(&mut self) -> Result<Token, JsonError> {
         self.advance(); // consume opening quote - throw it away
-        let mut string_value = String::new();
+        // this capacity is really just a guess - seems likely that a most strings in
+        // a JSON document would be small
+        let mut string_value = String::with_capacity(32);
         let mut string_terminated = false;
         while let Some(next_ch) = self.peek() {
             match next_ch {
@@ -211,7 +215,7 @@ impl Tokenizer {
                     position: self.position,
                 });
             }
-            let mut start_of_second_unicode_sequence = String::new();
+            let mut start_of_second_unicode_sequence = String::with_capacity(3);
             for _ in 0..2 {
                 match self.advance() {
                     Some(ch) => {
@@ -274,7 +278,7 @@ impl Tokenizer {
     }
 
     fn get_unicode_hex_string(&mut self) -> Result<String, JsonError> {
-        let mut result = String::new();
+        let mut result = String::with_capacity(4);
         let mut char_count = 0;
         while char_count < 4 {
             match self.advance() {

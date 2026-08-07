@@ -8,6 +8,8 @@ on:
   pull_request:
 
 env:
+  # COLUMNS is used by rich for setting console width
+  COLUMNS: 120
   CARGO_TERM_COLOR: "always"
   UV_WORKING_DIRECTORY: "rust-json-parser"
 
@@ -18,16 +20,16 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: "Format Rust code"
-        run: cd rust-json-parser && cargo fmt --check
+        run: cargo fmt --manifest-path rust-json-parser/Cargo.toml --check
 
       - name: "Lint Rust code"
-        run: cd rust-json-parser && cargo clippy -- --deny warnings
+        run: cargo clippy --manifest-path rust-json-parser/Cargo.toml -- --deny warnings
 
       - name: "Build Rust lib"
-        run: cd rust-json-parser && cargo build --verbose
+        run: cargo build --manifest-path rust-json-parser/Cargo.toml --verbose
 
       - name: "Run Rust tests"
-        run: cd rust-json-parser && cargo test --verbose
+        run: cargo test --manifest-path rust-json-parser/Cargo.toml --verbose
 
       - name: "Set up uv"
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
@@ -50,3 +52,12 @@ jobs:
 
       - name: "Run Python tests"
         run: uv run pytest
+
+      - name: "Run benchmarks (100 iterations)"
+        run: |
+            uv run --no-editable --reinstall-package rust_json_parser \
+              rust-json-parser benchmark \
+              ../test_data/benchmark-small.json \
+              ../test_data/benchmark-medium.json \
+              ../test_data/benchmark-large.json \
+              --num-iterations 100
