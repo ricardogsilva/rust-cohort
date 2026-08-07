@@ -50,3 +50,12 @@ jobs:
 
       - name: "Run Python tests"
         run: uv run pytest
+
+      - name: "Run benchmarks (100 iterations)"
+        run: |
+            uv run --no-editable --reinstall-package rust_json_parser \
+              rust-json-parser benchmark \
+              test_data/benchmark-small.json \
+              test_data/benchmark-medium.json \
+              test_data/benchmark-large.json \
+              --num-iterations 100
