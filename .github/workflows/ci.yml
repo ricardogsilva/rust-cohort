@@ -8,6 +8,8 @@ on:
   pull_request:
 
 env:
+  # COLUMNS is used by rich for setting console width
+  COLUMNS: 120
   CARGO_TERM_COLOR: "always"
   UV_WORKING_DIRECTORY: "rust-json-parser"
 
